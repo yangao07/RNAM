@@ -1,0 +1,11 @@
+#exe
+rest
+
+#.o
+*.o
+
+#tags
+tags
+
+#cscope
+cscope*
