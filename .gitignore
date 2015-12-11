@@ -1,5 +1,7 @@
 #exe
 rest
+gdb_rest
+lit_rest
 
 #.o
 *.o
@@ -9,3 +11,6 @@ tags
 
 #cscope
 cscope*
+
+#data
+data/*

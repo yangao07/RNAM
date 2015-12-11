@@ -12,5 +12,7 @@ void hash_init(hash_idx *h_idx);
 void hash_free(hash_idx *h_idx);
 
 int kmer_gen(const char *prefix, hash_idx *h_idx);
+int kmer_re_gen(const char *prefix, hash_idx *h_idx, de_bwt_t *de_idx);
+int kmer_merge(hash_idx h_idx, de_bwt_t *de_idx);
 
 #endif
