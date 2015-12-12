@@ -30,6 +30,7 @@ int rest_index_usage(void)
 void hash_init_idx_para(hash_idx *h)
 {
     h->hp.k = 22;
+    h->hp.k_n = 44;
     h->hp.k_m = 0xfffffffffff; // 44
     h->hp.hash_k = 13;
     h->hp.hash_n = 26;
@@ -50,8 +51,8 @@ void hash_init_idx_para(hash_idx *h)
 
     h->hp.next_char_ni = 38;
 
-    h->hp.uni_ni = 0;
-    h->hp.uni_m = 0x1;
+    h->hp.spe_ni = 0;
+    h->hp.spe_m = 0x1;
 
     /*
     h->hp.offset_ni = 28;
@@ -66,6 +67,7 @@ void hash_init_idx_para(hash_idx *h)
 void hash_init_idx32_para(hash_idx *h)
 {
     h->hp.k = 4;
+    h->hp.k_n = 8;
     h->hp.k_m = 0xff; // 8
     h->hp.hash_k = 2;
     h->hp.hash_n = 4;
@@ -89,13 +91,14 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.sk_n = 5;
     h->hp.sk_m = 0x1f; // 5
 
-    h->hp.uni_ni = 0;  
-    h->hp.uni_m = 0x1;
+    h->hp.spe_ni = 0;  
+    h->hp.spe_m = 0x1;
 }
 
 void hash_reset_idx_para(hash_idx *h)
 {
     if (h->hp.k != 4) {
+        h->hp.k_n = h->hp.k << 1;
         h->hp.k_m = 0;
         uint8_t i=0;
         while (i < h->hp.k << 1) {
@@ -123,6 +126,7 @@ void hash_reset_idx_para(hash_idx *h)
 void hash_init_idx32_para(hash_idx *h)
 {
     h->hp.k = 22;
+    h->hp.k_n = 24;
     h->hp.k_m = 0xfffffffffff; // 44
     h->hp.hash_k = 13;
     h->hp.hash_n = 26;
@@ -146,13 +150,14 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.sk_n = 5;
     h->hp.sk_m = 0x1f; // 5
     
-    h->hp.uni_ni = 0;
-    h->hp.uni_m = 0x1;
+    h->hp.spe_ni = 0;
+    h->hp.spe_m = 0x1;
 }
 
 void hash_reset_idx_para(hash_idx *h)
 {
     if (h->hp.k != 22) {
+        h->hp.k_n = h->hp.k << 1;
         h->hp.k_m = 0;
         uint8_t i=0;
         while (i < h->hp.k << 1) {

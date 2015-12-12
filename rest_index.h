@@ -7,6 +7,7 @@ int rest_index(int argc, char *argv[]);
 
 typedef struct {
     uint8_t k;          // kmer len
+    uint8_t k_n;
     uint64_t k_m;       // 22: 0xfffffffffff
     uint8_t hash_k;     // first level's hash-kmer len 
     uint8_t hash_n;     // 
@@ -24,8 +25,8 @@ typedef struct {
 
     uint8_t sk_ni, sk_n, sk_m;      // for special-kmer, len<k
 
-    uint8_t uni_ni;// uni_flag: generate #-kmer
-    uint8_t uni_m; // 0x1
+    uint8_t spe_ni;// uni_flag: generate #-kmer
+    uint8_t spe_m; // 0x1
 } hash_para;
 
 #define kmer_int_t uint64_t
