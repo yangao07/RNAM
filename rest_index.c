@@ -32,10 +32,13 @@ void hash_init_idx_para(hash_idx *h)
     h->hp.k = 22;
     h->hp.k_m = 0xfffffffffff; // 44
     h->hp.hash_k = 13;
+    h->hp.hash_n = 26;
+    h->hp.hash_m = 0x3ffffff; // 26
     h->hp.hash_size = pow(4, 13);
     
     h->hp.remn_k = 9;
     h->hp.remn_n = 18;
+    h->hp.remn_m = 0x3ffff; // 18
     h->hp.remn_ni = 46;
 
     h->hp.in_ni = 45;   // in
@@ -66,10 +69,12 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.k_m = 0xff; // 8
     h->hp.hash_k = 2;
     h->hp.hash_n = 4;
+    h->hp.hash_m = 0xf; // 4
     h->hp.hash_size = pow(4, 2);
     
     h->hp.remn_k = 2;
     h->hp.remn_n = 4;
+    h->hp.remn_m = 0xf; // 4
     h->hp.remn_ni = 28;
 
     h->hp.in_ni = 27;   // in
@@ -80,9 +85,12 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.char_m = 0x7;     // 3
     h->hp.next_char_ni = 20;
 
+    h->hp.sk_ni = 1;
+    h->hp.sk_n = 5;
+    h->hp.sk_m = 0x1f; // 5
+
     h->hp.uni_ni = 0;  
     h->hp.uni_m = 0x1;
-
 }
 
 void hash_reset_idx_para(hash_idx *h)
@@ -97,23 +105,33 @@ void hash_reset_idx_para(hash_idx *h)
         }
         h->hp.hash_k = h->hp.k - 2;
         h->hp.hash_n = h->hp.hash_k << 1;
+        h->hp.hash_m = 0;
+        i=0;
+        while (i < h->hp.hash_n) {
+            h->hp.hash_m <<= 1;
+            h->hp.hash_m |= 1;
+            i++;
+        }
         h->hp.hash_size = pow(4, h->hp.hash_k);
     }
 }
 #else
 // hash-node: (uint32_t)
-// [1-18][19--20][21-23][24--26]
-//  9-mer in/out  bwt_c  next_c
+// [1-18][19--20][21-23][24--26][27-31][32]
+//  9-mer in/out  bwt_c  next_c  k-len  uni
+//                               k-len: for special-kmer, len<k (2^5=32)
 void hash_init_idx32_para(hash_idx *h)
 {
     h->hp.k = 22;
     h->hp.k_m = 0xfffffffffff; // 44
     h->hp.hash_k = 13;
     h->hp.hash_n = 26;
+    h->hp.hash_m = 0x3ffffff; // 26
     h->hp.hash_size = pow(4, 13);
     
     h->hp.remn_k = 9;
     h->hp.remn_n = 18;
+    h->hp.remn_m = 0x3ffff; // 18
     h->hp.remn_ni = 14;
 
     h->hp.in_ni = 13;   // in
@@ -123,6 +141,10 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.bwt_char_ni = 9; 
     h->hp.char_m = 0x7;     // 3
     h->hp.next_char_ni = 6;
+
+    h->hp.sk_ni = 1;
+    h->hp.sk_n = 5;
+    h->hp.sk_m = 0x1f; // 5
     
     h->hp.uni_ni = 0;
     h->hp.uni_m = 0x1;
@@ -140,6 +162,13 @@ void hash_reset_idx_para(hash_idx *h)
         }
         h->hp.hash_k = h->hp.k - 9;
         h->hp.hash_n = h->hp.hash_k << 1;
+        h->hp.hash_m = 0;
+        i=0;
+        while (i < h->hp.hash_n) {
+            h->hp.hash_m <<= 1;
+            h->hp.hash_m |= 1;
+            i++;
+        }
         h->hp.hash_size = pow(4, h->hp.hash_k);
     }
 }

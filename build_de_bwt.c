@@ -38,7 +38,7 @@ int build_de_bwt(char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
     kmer_re_gen(prefix, h_idx, de_idx);
     // merge normal kmer and $-contained kmer
     kmer_merge(*h_idx, de_idx);
-    fprintf(stdout, "BWT-str:\n%s\n", de_idx->bwt_str->s);
+    int i; for (i=0; i<de_idx->bwt_str->l; ++i) fprintf(stdout, "%c\n", de_idx->bwt_str->s[i]);
     
     hash_free(h_idx);
     fprintf(stderr, "[build_de_bwt] Building de Bruijn-BWT index done!\n");

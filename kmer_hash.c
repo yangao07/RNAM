@@ -28,11 +28,11 @@ void hash_init(hash_idx *h_idx)
 
     uint32_t i;
     for (i = 0; i < h_idx->hp.hash_size; ++i) {
-        h_idx->kmer_m[i] = 8;
-        h_idx->kmer_node[i] = (kmer_node_t*)_err_calloc(8, sizeof(kmer_node_t));
+        h_idx->kmer_m[i] = 1;
+        h_idx->kmer_node[i] = (kmer_node_t*)_err_calloc(1, sizeof(kmer_node_t));
 
-        h_idx->skmer_m[i] = 8;
-        h_idx->skmer_node[i] = (kmer_node_t*)_err_calloc(8, sizeof(kmer_node_t));
+        h_idx->skmer_m[i] = 1;
+        h_idx->skmer_node[i] = (kmer_node_t*)_err_calloc(1, sizeof(kmer_node_t));
     }
 }
 
@@ -145,9 +145,29 @@ uint32_t bin_search_kmer(uint8_t *ef, hash_idx h, hash_int_t hashKey, remn_int_t
     return h.kmer_num[hashKey];
 }
 
-kmer_num_t bin_spe_search_kmer(hash_idx h, hash_int_t hashKey, remn_int_t kmerKey)
+#define set_kmer_key(n, kmerKey, h) { (*(n)) = (kmerKey << ((h)->hp.remn_ni)); }
+#define set_MinEdge(n, h) { (*(n)) |= (1 << ((h)->hp.in_ni)); }
+#define set_MoutEdge(n, h) { (*(n)) |= (1 << ((h)->hp.out_ni)); }
+#define set_bwt_char(n, last_nt, h) { (*(n)) |= (last_nt << ((h)->hp.bwt_char_ni)); }    // [0:12]: [N:ACGT]
+#define set_next_char(n, next_nt, h) { (*(n)) |= (next_nt << ((h)->hp.next_char_ni)); }
+#define set_sk_n(n, sk_n, h) { (*(n)) |= ((sk_n) << ((h)->hp.sk_ni)); }
+#define set_uni(n, h) {(*(n)) |= (1 << ((h)->hp.uni_ni)); }
+
+#define get_kmer_key(n, h)  ((n) >> ((h).hp.remn_ni))
+#define has_MinEdge(n, h) (((n) >> ((h).hp.in_ni)) & ((h).hp.inout_m))
+#define has_MoutEdge(n, h) (((n) >> ((h).hp.out_ni)) & ((h).hp.inout_m))
+#define get_bwt_char(n, h) (((n) >> ((h).hp.bwt_char_ni)) & ((h).hp.char_m))
+#define get_next_char(n, h) (((n) >> ((h).hp.next_char_ni)) & ((h).hp.char_m))
+#define get_sk_n(n, h) (((n) >> ((h).hp.sk_ni)) & ((h).hp.sk_m))
+#define get_uni(n, h) (((n) >> ((h).hp.uni_ni)) & ((h).hp.uni_m))
+
+// for static sort
+//int kmer_node_comp(kmer_node_t k1, kmer_node_t k2) { return 0; }
+//int skmer_node_comp(kmer_node_t sk1, kmer_node_t sk2) { return 0; }
+
+kmer_num_t bin_spe_search_kmer(hash_idx h, hash_int_t hashKey, remn_int_t kmerKey, uint8_t sk_n)
 {
-    remn_int_t tmpKey;
+    remn_int_t tmpKey; uint8_t tmp_sk_n;
     int left=0, right = h.skmer_num[hashKey]-1, middle;
     if (right == -1) { return 0; }
 
@@ -158,35 +178,19 @@ kmer_num_t bin_spe_search_kmer(hash_idx h, hash_int_t hashKey, remn_int_t kmerKe
     while (left <= right) {
         middle = (left+right)>>1;
         tmpKey = first_n_bits(remn_int_t, h.skmer_node[hashKey][middle], _node_size, h.hp.remn_n);
-        if (tmpKey == kmerKey) { // select the smallest of those that are larger than kmerKey
-            kmer_num_t i;
-            for (i = middle+1; i <= (kmer_num_t)right; ++i) {
-                tmpKey = first_n_bits(remn_int_t, h.skmer_node[hashKey][i], _node_size, h.hp.remn_n);
-                if (tmpKey != kmerKey) break;
-            }
-            return i; 
-        } else if (tmpKey > kmerKey) {
-            if ((middle == 0) || (first_n_bits(remn_int_t, h.skmer_node[hashKey][middle-1], _node_size, h.hp.remn_n) < kmerKey)) {
+        tmp_sk_n = get_sk_n(h.skmer_node[hashKey][middle], h);
+        if (tmpKey > kmerKey || (tmpKey == kmerKey && tmp_sk_n > sk_n)) { // bigger
+            if ((middle == 0) || (first_n_bits(remn_int_t, h.skmer_node[hashKey][middle-1], _node_size, h.hp.remn_n) < kmerKey) 
+                    || (first_n_bits(remn_int_t, h.skmer_node[hashKey][middle-1], _node_size, h.hp.remn_n) == kmerKey && get_sk_n(h.skmer_node[hashKey][middle-1], h) <= sk_n))
                 return middle;
-            } else right = middle-1;
-        } else left = middle+1;
+            right = middle-1;
+        } else if (tmpKey < kmerKey || (tmpKey == kmerKey && tmp_sk_n <= sk_n))
+            left = middle+1;
+        else err_fatal_simple("ERROR: same skmer and sk_n!\n");
+
     }
     return h.skmer_num[hashKey];
 }
-
-#define set_kmer_key(n, kmerKey, h) { (*(n)) = (kmerKey << ((h)->hp.remn_ni)); }
-#define set_MinEdge(n, h) { (*(n)) |= (1 << ((h)->hp.in_ni)); }
-#define set_MoutEdge(n, h) { (*(n)) |= (1 << ((h)->hp.out_ni)); }
-#define set_bwt_char(n, last_nt, h) { (*(n)) |= (last_nt << ((h)->hp.bwt_char_ni)); }    // [0:12]: [N:ACGT]
-#define set_next_char(n, next_nt, h) { (*(n)) |= (next_nt << ((h)->hp.next_char_ni)); }
-#define set_uni(n, h) {(*(n)) |= (1 << ((h)->hp.uni_ni)); }
-
-#define get_kmer_key(n, h)  ((n) >> ((h).hp.remn_ni))
-#define has_MinEdge(n, h) (((n) >> ((h).hp.in_ni)) & ((h).hp.inout_m))
-#define has_MoutEdge(n, h) (((n) >> ((h).hp.out_ni)) & ((h).hp.inout_m))
-#define get_bwt_char(n, h) (((n) >> ((h).hp.bwt_char_ni)) & ((h).hp.char_m))
-#define get_next_char(n, h) (((n) >> ((h).hp.next_char_ni)) & ((h).hp.char_m))
-#define get_uni(n, h) (((n) >> ((h).hp.uni_ni)) & ((h).hp.uni_m))
 
 int bin_hit_kmer(uint32_t *ki, hash_idx *h, hash_int_t hashKey, remn_int_t kmerKey)
 {
@@ -233,7 +237,7 @@ int update_hash(uint32_t k_i, uint8_t ef, hash_idx *h, hash_int_t hashKey, remn_
     return 1;
 }
 
-int update_spe_hash(uint32_t k_i, hash_idx *h, hash_int_t hashKey, remn_int_t kmerKey, uint8_t pre_nt)
+int update_spe_hash(uint32_t k_i, hash_idx *h, hash_int_t hashKey, remn_int_t kmerKey, uint8_t pre_nt, uint8_t sk_n)
 {
     kmer_num_t k_n = ++(h->skmer_num[hashKey]);
     if (k_n > h->skmer_m[hashKey]) {
@@ -245,6 +249,7 @@ int update_spe_hash(uint32_t k_i, hash_idx *h, hash_int_t hashKey, remn_int_t km
     kmer_node_t t = kmerKey;
     set_kmer_key(h->skmer_node[hashKey]+k_i, t, h);
     set_bwt_char(h->skmer_node[hashKey]+k_i, pre_nt, h);
+    set_sk_n(h->skmer_node[hashKey]+k_i, sk_n, h);
     return 1;
 }
 
@@ -256,7 +261,7 @@ int update_spe_hash(uint32_t k_i, hash_idx *h, hash_int_t hashKey, remn_int_t km
 //   cur            next 
 //   TAGA(M-out) -> AGAT
 
-int gen_spe_hash(uint32_t k_i, hash_idx *h, de_bwt_t *de_idx, hash_int_t hashKey, remn_int_t kmerKey, uint8_t pre_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i)
+int gen_spe_hash(uint32_t k_i, hash_idx *h, de_bwt_t *de_idx, hash_int_t hashKey, remn_int_t kmerKey, uint8_t pre_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i, uint8_t next_nt)
 {
     kmer_node_t k_node = h->kmer_node[hashKey][k_i];
     kmer_int_t kmerInt = hashKey; kmerInt <<= h->hp.remn_n; kmerInt |= kmerKey;
@@ -277,17 +282,14 @@ int gen_spe_hash(uint32_t k_i, hash_idx *h, de_bwt_t *de_idx, hash_int_t hashKey
         for (i = 0; i < h->hp.k-1; ++i) {
             s_hashKey = first_n_bits(hash_int_t, s_kmerInt, (h->hp.k)<<1, h->hp.hash_n);
             s_kmerKey = last_n_bits(remn_int_t, s_kmerInt, _int_size, h->hp.remn_n);
-            uint32_t k_i = bin_spe_search_kmer(*h, s_hashKey, s_kmerKey);
-            if (!update_spe_hash(k_i, h, s_hashKey, s_kmerKey, bwt_nt)) err_fatal_simple("ERROR: hash-update fail!\n");
+            uint32_t k_i = bin_spe_search_kmer(*h, s_hashKey, s_kmerKey, h->hp.k-1-i);
+            if (!update_spe_hash(k_i, h, s_hashKey, s_kmerKey, bwt_nt, h->hp.k-1-i)) err_fatal_simple("ERROR: hash-update fail(1)!\n");
 
             bwt_nt = first_n_bits(uint8_t, s_kmerInt, (h->hp.k)<<1, 2);
             s_kmerInt = (s_kmerInt<<2) & h->hp.k_m;
         }
         //              uid, u_offset
-        //              reset bwt_char# for last_kmer (last_k_i, last_hashKey, last_kmerKey)
-        set_bwt_char(h->kmer_node[pre_hashKey]+pre_k_i, nt_N, h);
         //              generate bwt_char for ^#-kmer
-        //fprintf(stderr, "BWT-char: %c\n", BWT_STR[bwt_nt]);
         kputc(BWT_STR[bwt_nt], de_idx->bwt_str);
     } 
     if ((has_MoutEdge(k_node, *h) || get_next_char(k_node, *h) > 3) && !get_uni(h->kmer_node[hashKey][k_i], *h)) {
@@ -300,13 +302,20 @@ int gen_spe_hash(uint32_t k_i, hash_idx *h, de_bwt_t *de_idx, hash_int_t hashKey
 
             s_hashKey = first_n_bits(hash_int_t, s_kmerInt, (h->hp.k)<<1, h->hp.hash_n);
             s_kmerKey = last_n_bits(remn_int_t, s_kmerInt, _int_size, h->hp.remn_n);
-            uint32_t k_i = bin_spe_search_kmer(*h, s_hashKey, s_kmerKey);
-            if (!update_spe_hash(k_i, h, s_hashKey, s_kmerKey, bwt_nt)) err_fatal_simple("ERROR: hash-update fail!\n");
+            uint32_t k_i = bin_spe_search_kmer(*h, s_hashKey, s_kmerKey, h->hp.k-1-i);
+            if (!update_spe_hash(k_i, h, s_hashKey, s_kmerKey, bwt_nt, h->hp.k-1-i)) err_fatal_simple("ERROR: hash-update fail(2)!\n");
         }
         //             uid, u_offset
         //              generate bwt_char for ^#-kmer
-        //fprintf(stderr, "BWT-char: %c\n", BWT_STR[first_n_bits(uint8_t, s_kmerInt, (h->hp.k)<<1, 2)]);
         kputc(BWT_STR[first_n_bits(uint8_t, s_kmerInt, (h->hp.k)<<1, 2)], de_idx->bwt_str);
+    }
+    if (has_MoutEdge(k_node, *h) && next_nt != nt_N) {
+        // set bwt_char for next_kmer
+        hash_int_t next_hashKey = ((hashKey << 2) & h->hp.hash_m) | first_n_bits(uint8_t, kmerKey, h->hp.remn_n, 2);
+        remn_int_t next_kmerKey = ((kmerKey << 2) & h->hp.remn_m) | next_nt; 
+        kmer_num_t next_k_i;
+        if (!bin_hit_kmer(&next_k_i, h, next_hashKey, next_kmerKey)) err_fatal_core(__func__, "ERROR: Cannot hit in hash-table!\nnext_nt: %d\n", next_nt);
+        set_bwt_char(h->kmer_node[next_hashKey]+next_k_i, nt_N, h);
     }
     return 1;    
 }
@@ -328,7 +337,7 @@ int hash_check(hash_idx *h, kmer_int_t kmerInt, uint8_t pre_nt, uint8_t next_nt)
     return 0;
 }
 
-kmer_num_t hash_spe_check(hash_idx *h, de_bwt_t *de_idx, kmer_int_t kmerInt, uint8_t pre_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i, hash_int_t *hashKey)
+kmer_num_t hash_spe_check(hash_idx *h, de_bwt_t *de_idx, kmer_int_t kmerInt, uint8_t pre_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i, hash_int_t *hashKey, uint8_t next_nt)
 {
     remn_int_t kmerKey;
     kmer_num_t k_i;
@@ -337,7 +346,7 @@ kmer_num_t hash_spe_check(hash_idx *h, de_bwt_t *de_idx, kmer_int_t kmerInt, uin
     kmerKey = last_n_bits(remn_int_t, kmerInt, _int_size, h->hp.remn_n);
 
     if (!bin_hit_kmer(&k_i, h, *hashKey, kmerKey)) err_fatal_simple("ERROR: Cannot hit in hash-table!\n");
-    if (!gen_spe_hash(k_i, h, de_idx, *hashKey, kmerKey, pre_nt, pre_hashKey, pre_k_i)) err_fatal_simple("ERROR: hash-update fail!\n");
+    if (!gen_spe_hash(k_i, h, de_idx, *hashKey, kmerKey, pre_nt, pre_hashKey, pre_k_i, next_nt)) err_fatal_simple("ERROR: hash-update fail!\n");
 
     return k_i;
 }
@@ -392,10 +401,10 @@ int kmer_re_gen(const char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
         fprintf(stderr, "[%s] Re-generating and sorting kmer for %s ...\n",__func__, fa_seq->name.s);
         pre_k_i = -1; pre_hashKey = 0;
         if (get_first_kmer(fa_seq, &seq_i, h_idx->hp.k, &kmerInt, &next_nt)) {        // first kmer
-            k_i = hash_spe_check(h_idx, de_idx, kmerInt, nt_N, pre_hashKey, pre_k_i, &hashKey);
+            k_i = hash_spe_check(h_idx, de_idx, kmerInt, nt_N, pre_hashKey, pre_k_i, &hashKey, next_nt);
             pre_k_i = k_i; pre_hashKey = hashKey;
             while (get_shift_kmer(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.k_m, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
-                k_i = hash_spe_check(h_idx, de_idx, kmerInt, pre_nt, pre_hashKey, pre_k_i, &hashKey);
+                k_i = hash_spe_check(h_idx, de_idx, kmerInt, pre_nt, pre_hashKey, pre_k_i, &hashKey, next_nt);
                 pre_k_i = k_i; pre_hashKey = hashKey;
             }
         }
@@ -446,5 +455,20 @@ int kmer_merge(hash_idx h_idx, de_bwt_t *de_idx)
             k++;
         }
     }
+#ifdef __DEBUG__
+    for (i = 0; i < h_idx.hp.hash_size; ++i) {
+        for (j = 0; j < h_idx.kmer_num[i]; ++j) {
+            cons_kmer(h_idx.kmer_node[i][j], i, h_idx.hp.k, h_idx.hp.remn_n, h_idx.hp.remn_ni);
+            fprintf(stdout, "\t\t%c\n", BWT_STR[get_bwt_char(h_idx.kmer_node[i][j], h_idx)]);
+        }
+    }
+    fprintf(stdout, "\n");
+    for (i = 0; i < h_idx.hp.hash_size; ++i) {
+        for (j = 0; j < h_idx.skmer_num[i]; ++j) {
+            cons_kmer(h_idx.skmer_node[i][j], i, h_idx.hp.k, h_idx.hp.remn_n, h_idx.hp.remn_ni);
+            fprintf(stdout, "\t\t%c\n", BWT_STR[get_bwt_char(h_idx.skmer_node[i][j], h_idx)]);
+        }
+    }
+#endif
     return 0;
 }

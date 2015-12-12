@@ -10,15 +10,19 @@ typedef struct {
     uint64_t k_m;       // 22: 0xfffffffffff
     uint8_t hash_k;     // first level's hash-kmer len 
     uint8_t hash_n;     // 
+    uint64_t hash_m;
     uint32_t hash_size; // pow(4, hash_klen)
 
     uint8_t remn_k;     // remain len
     uint8_t remn_n;     // remain len
+    uint64_t remn_m;
     uint8_t remn_ni;    // pos of remain kmer
 
     uint8_t in_ni, out_ni, inout_m; // pos of in/out flag
     uint8_t bwt_char_ni,   char_m;  // pos of bwt_char
     uint8_t next_char_ni;           // pos of next_char
+
+    uint8_t sk_ni, sk_n, sk_m;      // for special-kmer, len<k
 
     uint8_t uni_ni;// uni_flag: generate #-kmer
     uint8_t uni_m; // 0x1
