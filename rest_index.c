@@ -23,24 +23,25 @@ int rest_index_usage(void)
 }
 
 // hash-node: (uint64_t)
-// [1-18][19--20][21-23][24--36][37-64]
-//  9mer  in/out  bwt_c  offset   uid
-//              for tmp: (next_c)
-//                       [34--36]
+// [1-16][17-18][19--20][21-23][24--36][37-64]
+//  8mer  none   in/out  bwt_c  offset   uid
+//                     for tmp: (next_c)
+//                              [34--36]
 void hash_init_idx_para(hash_idx *h)
 {
     h->hp.k = 22;
     h->hp.k_n = 44;
     h->hp.k_m = 0xfffffffffff; // 44
-    h->hp.hash_k = 13;
-    h->hp.hash_n = 26;
-    h->hp.hash_m = 0x3ffffff; // 26
-    h->hp.hash_size = pow(4, 13);
+
+    h->hp.hash_k = 14;
+    h->hp.hash_n = 28;
+    h->hp.hash_m = 0xfffffff; // 28
+    h->hp.hash_size = pow(4, 14);
     
-    h->hp.remn_k = 9;
-    h->hp.remn_n = 18;
-    h->hp.remn_m = 0x3ffff; // 18
-    h->hp.remn_ni = 46;
+    h->hp.remn_k = 8;
+    h->hp.remn_n = 16;
+    h->hp.remn_m = 0xffff; // 16
+    h->hp.remn_ni = 48;
 
     h->hp.in_ni = 45;   // in
     h->hp.out_ni = 44;  // out
@@ -120,27 +121,27 @@ void hash_reset_idx_para(hash_idx *h)
 }
 #else
 // hash-node: (uint32_t)
-// [1-18][19--20][21-23][24--26][27-31][32]
-//  9-mer in/out  bwt_c  next_c  k-len  uni
-//                               k-len: for special-kmer, len<k (2^5=32)
+// [1-16][17-18][19--20][21-23][24--26][27-31][32]
+//  8-mer none   in/out  bwt_c  next_c  k-len  uni
+//                                      k-len: for special-kmer, len<k (2^5=32)
 void hash_init_idx32_para(hash_idx *h)
 {
     h->hp.k = 22;
-    h->hp.k_n = 24;
+    h->hp.k_n = 44;
     h->hp.k_m = 0xfffffffffff; // 44
-    h->hp.hash_k = 13;
-    h->hp.hash_n = 26;
-    h->hp.hash_m = 0x3ffffff; // 26
-    h->hp.hash_size = pow(4, 13);
+    h->hp.hash_k = 14;
+    h->hp.hash_n = 28;
+    h->hp.hash_m = 0xfffffff; // 28
+    h->hp.hash_size = pow(4, 14);
     
-    h->hp.remn_k = 9;
-    h->hp.remn_n = 18;
-    h->hp.remn_m = 0x3ffff; // 18
-    h->hp.remn_ni = 14;
+    h->hp.remn_k = 8;
+    h->hp.remn_n = 16;
+    h->hp.remn_m = 0xffff; // 16
+    h->hp.remn_ni = 16;
 
+    h->hp.inout_m = 0x1;    // 1
     h->hp.in_ni = 13;   // in
     h->hp.out_ni = 12;  // out
-    h->hp.inout_m = 0x1;    // 1
 
     h->hp.bwt_char_ni = 9; 
     h->hp.char_m = 0x7;     // 3
@@ -160,12 +161,12 @@ void hash_reset_idx_para(hash_idx *h)
         h->hp.k_n = h->hp.k << 1;
         h->hp.k_m = 0;
         uint8_t i=0;
-        while (i < h->hp.k << 1) {
+        while (i < h->hp.k_n) {
             h->hp.k_m <<= 1;
             h->hp.k_m |= 1;
             i++;
         }
-        h->hp.hash_k = h->hp.k - 9;
+        h->hp.hash_k = h->hp.k - h->hp.remn_k;
         h->hp.hash_n = h->hp.hash_k << 1;
         h->hp.hash_m = 0;
         i=0;

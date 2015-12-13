@@ -18,7 +18,7 @@ $(PROG): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
 .c.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $< -o $@ 
 
 $(DEBUG):
 	$(CC) $(DFLAGS) $(SOURCE) $(DMARCRO) -o $@ $(LDFLAGS)

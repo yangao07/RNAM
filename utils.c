@@ -281,21 +281,21 @@ int err_gzclose(gzFile file)
 void *err_malloc(const char *func, size_t s)
 {
     void *ret = (void*)malloc(s);
-    if (ret == NULL) _err_fatal_simple(func, "Malloc fail!\n");
+    if (ret == NULL) err_fatal_core(func, "Malloc fail!\nSize: %lld\n", s);
     else return ret;
 }
 
 void *err_calloc(const char *func, size_t n, size_t s)
 {
     void *ret = (void*)calloc(n, s);
-    if (ret == NULL) _err_fatal_simple(func, "Calloc fail!\n");
+    if (ret == NULL) err_fatal_core(func, "Calloc fail!\nN: %d\tSize: %lld\n", n, s);
     else return ret;
 }
 
 void *err_realloc(const char *func, void *p, size_t s)
 {
     void *ret = (void*)realloc(p, s);
-    if (ret == NULL) _err_fatal_simple(func, "Realloc fail!\n");
+    if (ret == NULL) err_fatal_core(func, "Realloc fail!\nSize: %lld\n", s);
     else return ret;
 }
 

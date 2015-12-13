@@ -86,7 +86,7 @@ extern "C" {
 	int err_gzclose(gzFile file);
 
 #define _err_malloc(s) err_malloc(__func__, s)
-#define _err_calloc(s, n) err_calloc(__func__, s, n)
+#define _err_calloc(n, s) err_calloc(__func__, n, s)
 #define _err_realloc(p, s) err_realloc(__func__, p, s)
     void *err_malloc(const char* func, size_t s);
     void *err_calloc(const char* func, size_t n, size_t s);

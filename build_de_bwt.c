@@ -25,7 +25,8 @@ int build_de_bwt(char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
 {
     fprintf(stderr, "[build_de_bwt] Building de Bruijn-BWT index for genome ...\n");
 
-    hash_init(h_idx); de_bwt_init(de_idx);
+    hash_init(h_idx); 
+    de_bwt_init(de_idx);
     // FIRST run for generating k-mer
     //   update in/out flag
     //   update bwt_char

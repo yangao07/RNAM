@@ -9,8 +9,9 @@ typedef struct {
     uint8_t k;          // kmer len
     uint8_t k_n;
     uint64_t k_m;       // 22: 0xfffffffffff
+
     uint8_t hash_k;     // first level's hash-kmer len 
-    uint8_t hash_n;     // 
+    uint8_t hash_n;
     uint64_t hash_m;
     uint32_t hash_size; // pow(4, hash_klen)
 
