@@ -161,9 +161,6 @@ kmer_num_t bin_search_kmer(uint8_t *ef, hash_idx h, hash_int_t hashKey, remn_int
     return h.kmer_num[hashKey];
 }
 
-// for static sort
-//int kmer_node_comp(kmer_node_t k1, kmer_node_t k2) { return 0; }
-//int skmer_node_comp(kmer_node_t sk1, kmer_node_t sk2) { return 0; }
 
 
 /*kmer_num_t bin_spe_search_kmer(hash_idx h, hash_int_t hashKey, remn_int_t kmerKey, uint8_t sk_n)
@@ -364,12 +361,29 @@ uint8_t hash_check(hash_idx *h, de_bwt_t *db, kmer_int_t kmerInt, uint8_t pre_nt
     return update_hash(k_i, equal_f, h, db, kmerInt, hashKey, kmerKey, pre_nt, pre_hashKey, pre_k_i, next_nt, cur_spe_flag);
 }
 
+// for static sort
+uint8_t REMN_N;
+uint8_t SK_NI;
+uint8_t SK_M;
+int skmer_comp(const void *sk1, const void *sk2) 
+{ 
+    remn_int_t kmerKey1 = first_n_bits(remn_int_t, (*(kmer_node_t*)sk1), _node_size, REMN_N);
+    remn_int_t kmerKey2 = first_n_bits(remn_int_t, (*(kmer_node_t*)sk2), _node_size, REMN_N);
+    uint8_t sk_n1 = ((*(kmer_node_t*)sk1) >> (SK_NI)) & SK_M;
+    uint8_t sk_n2 = ((*(kmer_node_t*)sk2) >> (SK_NI)) & SK_M;
+    if (kmerKey1 != kmerKey2) return kmerKey1 - kmerKey2;
+    else return sk_n1 - sk_n2;
+}
+
 void sort_spe_kmer(hash_idx *h)
 {
-    int i;
+    REMN_N = h->hp.remn_n;
+    SK_NI = h->hp.sk_ni;
+    SK_M  = h->hp.sk_m;
+    uint32_t i;
     for (i = 0; i < h->hp.hash_size; ++i) {
         if (h->skmer_num[i] > 1)
-            qsort(h->skmer_node[i], h->skmer_num[i], sizeof(kmer_node_t), spe_comp);
+            qsort(h->skmer_node[i], h->skmer_num[i], sizeof(kmer_node_t), skmer_comp);
     }
 }
 
