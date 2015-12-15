@@ -25,19 +25,21 @@ int build_de_bwt(char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
 {
     fprintf(stderr, "[build_de_bwt] Building de Bruijn-BWT index for genome ...\n");
 
-    hash_init(h_idx); 
+    hash_init_num(h_idx); 
     de_bwt_init(de_idx);
-    // FIRST run for generating k-mer
+    // FIRST run for counting the total number of kmer
+    kmer_tol_count(prefix, h_idx);
+    // FIRST run for generating k-mer and countint spe-kmer
     //   update in/out flag
     //   update bwt_char
-    //NEW: one-run for the whole generating
-    kmer_gen(prefix, h_idx, de_idx);
+    //   count the total number of spe-kmer
+    kmer_gen(prefix, h_idx);
     // SECOND run for generating unipath
     //   extra hash_num&node for $-contained kmer
     //   pos of unipath
     //   update bwt_char of head and tail kmer 
     //   uid and offset of kmer
-    //kmer_re_gen(prefix, h_idx, de_idx);
+    spe_kmer_gen(prefix, h_idx, de_idx);
     // merge normal kmer and $-contained kmer
     kmer_merge(*h_idx, de_idx);
     hash_free(h_idx);

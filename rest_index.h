@@ -42,13 +42,17 @@ typedef struct {
 
 typedef struct {
     hash_para hp; // hash_para
-    kmer_num_t *kmer_num;
-    kmer_num_t *kmer_m;
-    kmer_node_t **kmer_node;
+    
+    // [key+1]: num/m of key
+    uint64_t *kmer_m; // [0]=0, [i] = cumu_count of kmer
+    kmer_num_t *kmer_num; // whole count of existing kmer
+    uint64_t kmer_tol_count;
+    kmer_node_t *kmer_node;
 
-    kmer_num_t *skmer_num;   // hash index for special kmer
-    kmer_num_t *skmer_m;
-    kmer_node_t **skmer_node;
+    uint64_t *skmer_m;   // hash index for special kmer
+    kmer_num_t *skmer_num;   
+    uint64_t skmer_tol_count;
+    kmer_node_t *skmer_node;
 } hash_idx;
 
 typedef struct {
