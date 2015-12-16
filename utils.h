@@ -77,6 +77,8 @@ extern "C" {
         ATTRIBUTE((format(printf, 2, 3)));
 	int err_printf(const char *format, ...)
         ATTRIBUTE((format(printf, 1, 2)));
+	int stdout_printf(const char *format, ...)
+        ATTRIBUTE((format(printf, 1, 2)));
 	int err_fputc(int c, FILE *stream);
 #define err_putchar(C) err_fputc((C), stdout)
 	int err_fputs(const char *s, FILE *stream);

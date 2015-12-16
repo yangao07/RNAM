@@ -178,6 +178,18 @@ int err_printf(const char *format, ...)
 	va_list arg;
 	int done;
 	va_start(arg, format);
+	done = vfprintf(stderr, format, arg);
+	int saveErrno = errno;
+	va_end(arg);
+	if (done < 0) _err_fatal_simple("vfprintf(stderr)", strerror(saveErrno));
+	return done;
+}
+
+int stdout_printf(const char *format, ...) 
+{
+	va_list arg;
+	int done;
+	va_start(arg, format);
 	done = vfprintf(stdout, format, arg);
 	int saveErrno = errno;
 	va_end(arg);

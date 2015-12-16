@@ -75,6 +75,10 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.hash_m = 0xf; // 4
     h->hp.hash_size = pow(4, 2);
     
+    h->hp.uid_n  = 32;
+    h->hp.uid_ni = 32;
+    h->hp.uid_m = 0xffffffff;
+
     h->hp.remn_k = 2;
     h->hp.remn_n = 4;
     h->hp.remn_m = 0xf; // 4
@@ -121,9 +125,16 @@ void hash_reset_idx_para(hash_idx *h)
 }
 #else
 // hash-node: (uint32_t)
+// ni:16         13  12      9       6      1   0
 // [1-16][17-18][19--20][21-23][24--26][27-31][32]
 //  8-mer none   in/out  bwt_c  next_c  k-len  uni
 //                                      k-len: for special-kmer, len<k (2^5=32)
+// for spe-kmer
+// hash-node: (uint64_t)
+// ni:32     16         13  12      9       6      1   0
+// [1-32][33-48][49-50][51--52][53-55][56--58][59-63][64]
+//  uid   8-mer none   in/out  bwt_c  next_c  k-len  uni
+//                                            k-len: for special-kmer, len<k (2^5=32)
 void hash_init_idx32_para(hash_idx *h)
 {
     h->hp.k = 22;
@@ -133,6 +144,10 @@ void hash_init_idx32_para(hash_idx *h)
     h->hp.hash_n = 28;
     h->hp.hash_m = 0xfffffff; // 28
     h->hp.hash_size = pow(4, 14);
+
+    h->hp.uid_ni = 32;
+    h->hp.uid_n  = 32;
+    h->hp.uid_m  = 0xffffffff;
     
     h->hp.remn_k = 8;
     h->hp.remn_n = 16;
