@@ -45,6 +45,48 @@ void print_de_bwt(de_bwt_t de_idx)
     }
 }
 
+#define bwt_pre_pos(db, i) ()
+
+void de_bwt_cal_sa(de_bwt_t *db_idx, int intv)
+{
+    int uni_id_i, uni_id;
+    int i;
+
+    // calculate uni_id
+    for (i = 0; i < uni_n; ++i) {
+        uni_id_i = i, uni_id = i;
+        while () {
+            if (uni_id_i % intv == 0) db_idx->uni_id[uni_id_i/intv] = uni_id;
+            uni_id_i = bwt_pre_pos(db_idx, uni_id_i);
+        }
+        if (uni_id_i % intv == 0) db_idx->uni_id[uni_id_i/intv] = uni_id;
+    }
+}
+
+// calculate 
+void de_bwt_update_bwt(de_bwt_t *db_idx)
+{
+    int n_occ, i, k;
+    uint64_t c[4];
+
+    c[0] = c[1] = c[2] = c[3] = 0;
+
+    uint64_t *buf;
+
+    for (i = k = 0; i < db_idx->bwt_l; ++i) {
+        if (i % occ_interval = 0) {
+            memcpy(buf+k, c, sizeof(uint64_t) * 4);
+            k += sizeof(uint64_t);
+        }
+        if (i % 21 == 0) buf[k++] = db_idx->bwt[i/21]; // 64/3 = 21...1
+        ++c[bwt_nt(db_idx, i)];
+    }
+    // last
+    memcpy(buf+k, c, sizeof(uint64_t) * 4);
+    // update bwt
+    free(db_idx->bwt); db_idx->bwt = buf;
+}
+
 int build_de_bwt(char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
 {
     fprintf(stderr, "[build_de_bwt] Building de Bruijn-BWT index for genome ...\n");

@@ -124,6 +124,21 @@ void hash_reset_idx_para(hash_idx *h)
     }
 }
 #else
+// NEW for lower memory XXX
+// 
+// hash-node: (uint32_t)
+// ni:  8       5       2   1 
+// [1--24][25--27][28--30][31][32]
+//  12-mer  bwt_c  next_c  spe
+//
+// for spe-kmer
+// hash-node: (uint32_t)
+// ni:  8       5       0
+// [1--24][25--27][28--32]
+//  12-mer  bwt_c   k-len  
+//                  k-len: for special-kmer, len<k (2^5=32)
+//
+//
 // hash-node: (uint32_t)
 // ni:16         13  12      9       6      1   0
 // [1-16][17-18][19--20][21-23][24--26][27-31][32]

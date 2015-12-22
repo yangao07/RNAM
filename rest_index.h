@@ -37,7 +37,8 @@ typedef struct {
 #define kmer_node_t uint32_t 
 #define _node_size 32 
 #define _snode_size 64
-#define ref_offset_t uint32_t
+#define ref_offset_t uint32_t // for forward-only
+//#define ref_offset_t uint64_t // for forward and reverse
 #define skmer_node_t uint64_t
 
 typedef struct {
