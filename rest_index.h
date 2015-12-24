@@ -26,6 +26,8 @@ typedef struct {
     uint8_t sk_ni, sk_n, sk_m; // for special-kmer, len<k
 
     uint8_t spe_ni, spe_m;     // spe_flag: generate #-kmer
+
+    uint8_t uni_off_flag_ni, uni_off_m;
 } hash_para;
 
 #define kmer_int_t uint64_t
@@ -53,11 +55,13 @@ typedef struct {
     kmer_node_t   *kmer_node;
                  // same to kmer_node, size: kmer_tol_count
     debwt_count_t *uni_offset_c; // (cumulative) number of offsets for each unipath
+    kmer_int_t *uni_node;
+    debwt_count_t uni_n, uni_m, uni_t;
     debwt_count_t next_offset_c;
                  // same to kmer_num/skmer_num, size: uni_tol_count
     debwt_count_t *uni_offset_n;
                  // smae to kmer_node, size: kmer_tol_count
-    debwt_count_t *uni_id;       // UID of normal kmer
+    //debwt_count_t *uni_id;       // UID of normal kmer
     debwt_count_t last_uid, cur_uid, next_uid;
                  // smae to skmer_node
     ref_offset_t  *uni_offset;   // 1-base

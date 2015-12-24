@@ -32,7 +32,7 @@ void print_de_bwt(de_bwt_t de_idx)
     stdout_printf("UID:\n");
     uint32_t i, j;
     for (i = 0; i < de_idx.bwt_l-de_idx.n_unipath; ++i) {
-        fprintf(stdout, "# %d:\t%d\n", i+1, de_idx.uni_id[i]); 
+        //fprintf(stdout, "# %d:\t%d\n", i+1, de_idx.uni_id[i]); 
     }
     stdout_printf("Uni_offset_c:\n");
     for (i = 0; i < de_idx.n_unipath; ++i) stdout_printf("U_c %d:\t%d\n", i+1, de_idx.uni_offset_c[i+1]);
@@ -45,6 +45,7 @@ void print_de_bwt(de_bwt_t de_idx)
     }
 }
 
+/*
 #define bwt_pre_pos(db, i) ()
 
 void de_bwt_cal_sa(de_bwt_t *db_idx, int intv)
@@ -86,20 +87,21 @@ void de_bwt_update_bwt(de_bwt_t *db_idx)
     // update bwt
     free(db_idx->bwt); db_idx->bwt = buf;
 }
+*/
 
 int build_de_bwt(char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
 {
-    fprintf(stderr, "[build_de_bwt] Building de Bruijn-BWT index for genome ...\n");
+    err_printf("[build_de_bwt] Building de Bruijn-BWT index for genome ...\n");
 
     hash_init_num(h_idx); 
     // FIRST run for counting the total number of kmer
     kmer_tol_count(prefix, h_idx);
-    // FIRST run for generating k-mer and countint spe-kmer
+    // SECOND run for generating k-mer and countint spe-kmer
     //   update in/out flag
     //   update bwt_char
     //   count the total number of spe-kmer
     kmer_gen(prefix, h_idx);
-    // SECOND run for generating unipath
+    // THIRD run for generating unipath
     //   extra hash_num&node for $-contained kmer
     //   pos of unipath
     //   update bwt_char of head and tail kmer 
@@ -111,6 +113,6 @@ int build_de_bwt(char *prefix, hash_idx *h_idx, de_bwt_t *de_idx)
     hash_free(h_idx);
     print_de_bwt(*de_idx);
     
-    fprintf(stderr, "[build_de_bwt] Building de Bruijn-BWT index done!\n");
+    err_printf("[build_de_bwt] Building de Bruijn-BWT index done!\n");
     return 0;
 }
