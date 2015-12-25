@@ -327,7 +327,7 @@ void update_uni_node(hash_idx *h, kmer_int_t kInt)
     }
     h->uni_node[h->uni_n++] = kInt;
 }
-int kInt_comp(const void *k1, const void *k2) { return (*(kmer_int_t*)k1) - (*(kmer_int_t*)k2); }
+int kInt_comp(const void *k1, const void *k2) { if ((*(kmer_int_t*)k1)>(*(kmer_int_t*)k2)) return 1; else return -1; }
 void sort_uni_node(hash_idx *h) { qsort(h->uni_node, h->uni_n, sizeof(kmer_int_t), kInt_comp); }
 
 uint8_t update_hash(kmer_num_t k_i, uint8_t ef, hash_idx *h,
@@ -423,7 +423,7 @@ void update_off_c(debwt_count_t k_i, hash_idx *h, kmer_int_t kInt, hash_int_t ha
     kmer_node_t k_node = h->kmer_node[k_ns+k_i];
     if (get_bwt_char(k_node, *h) >= nt_N) {
         debwt_count_t uni_k_i;
-        if (!bin_hit_kInt(h->uni_node, h->uni_n, &uni_k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node by uid!\n");
+        if (!bin_hit_kInt(h->uni_node, h->uni_n, &uni_k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node by kInt!\n");
         h->uni_offset_c[uni_k_i]++;
     }
 }
@@ -434,6 +434,10 @@ void hash_off_c_check(hash_idx *h, kmer_int_t kInt)
     remn_int_t kmerKey = last_n_bits(remn_int_t, kInt, _int_size, h->hp.remn_n);
     debwt_count_t k_i;
     if (!bin_hit_kmer(&k_i, h, hashKey, kmerKey)) err_fatal_simple("ERROR: Cannot hit in hash-table!\n");
+#ifdef __DEBUG__
+    stdout_printf("k_i %d\n", k_i);
+    con_kmer(kInt, h->hp.k);
+#endif
     update_off_c(k_i, h, kInt, hashKey);
 }
 
@@ -461,12 +465,6 @@ void gen_spe_hash(kmer_num_t k_i, hash_idx *h, de_bwt_t *de_idx, ref_offset_t re
     kmer_int_t kmerInt = hashKey; kmerInt <<= h->hp.remn_n; kmerInt |= kmerKey;
     kmer_int_t s_kmerInt; hash_int_t s_hashKey; remn_int_t s_kmerKey;
 
-    uint8_t bwt_nt; int i;
-
-#ifdef __DEBUG__
-    cons_kmer(k_node, hashKey, *h);
-    con_kmer(kmerInt, h->hp.k);
-#endif
     // uid, uni_offset XXX
     if (get_bwt_char(k_node, *h) >= nt_N) { // new unipath , update (cur_uid and last_uid), U_offset, U_num
         debwt_count_t uni_k_i;
@@ -482,6 +480,7 @@ void gen_spe_hash(kmer_num_t k_i, hash_idx *h, de_bwt_t *de_idx, ref_offset_t re
         h->uni_offset[h->uni_offset_c[uni_k_i]+h->uni_offset_n[h->cur_uid]++] = ref_off;
     } 
                                                      // has been set_spe in the pre run
+    uint8_t bwt_nt; int i;
     if (get_bwt_char(k_node, *h) >= nt_N && p_nt != nt_N && get_spe(h->kmer_node[h->kmer_c[pre_hashKey]+pre_k_i], *h)) {
         set_un_spe(h->kmer_node+h->kmer_c[pre_hashKey]+pre_k_i, *h);
         // last_kmer -> spe_kmer 

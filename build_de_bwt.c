@@ -31,9 +31,10 @@ void print_de_bwt(de_bwt_t de_idx)
     stdout_printf("BWT_STR:\n%s\n", de_idx.bwt_str->s);
     stdout_printf("UID:\n");
     uint32_t i, j;
+    /*
     for (i = 0; i < de_idx.bwt_l-de_idx.n_unipath; ++i) {
-        //fprintf(stdout, "# %d:\t%d\n", i+1, de_idx.uni_id[i]); 
-    }
+        fprintf(stdout, "# %d:\t%d\n", i+1, de_idx.uni_id[i]); 
+    }*/
     stdout_printf("Uni_offset_c:\n");
     for (i = 0; i < de_idx.n_unipath; ++i) stdout_printf("U_c %d:\t%d\n", i+1, de_idx.uni_offset_c[i+1]);
     stdout_printf("Uni_offset:\n");
