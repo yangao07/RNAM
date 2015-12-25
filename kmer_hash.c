@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h> 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -27,15 +27,16 @@ void hash_init_num(hash_idx *h_idx)
 void hash_init_node(hash_idx *h_idx)
 {
     h_idx->kmer_node = (kmer_node_t*)_err_malloc(h_idx->kmer_tol_count * sizeof(kmer_node_t));
-    h_idx->uni_offset_c = (debwt_count_t*)_err_calloc(1025, sizeof(debwt_count_t));
+    //h_idx->uni_offset_c = (debwt_count_t*)_err_calloc(1025, sizeof(debwt_count_t));
     h_idx->uni_node = (kmer_int_t*)_err_calloc(1024, sizeof(kmer_int_t));
-    h_idx->uni_n = 0; h_idx->uni_m = 1024, h_idx->uni_t = 0;
+    h_idx->uni_n = 0; h_idx->uni_m = 1024;
 }
 
 void hash_init_snode(hash_idx *h_idx)
 {
     h_idx->skmer_node = (skmer_node_t*)_err_malloc(h_idx->skmer_tol_count * sizeof(skmer_node_t));
 
+    h_idx->uni_id = (debwt_count_t*)_err_malloc(h_idx->uni_n * sizeof(debwt_count_t));
     h_idx->cur_uid = 0; h_idx->next_uid = 0; // 0-base
     h_idx->next_offset_c = 0;
     h_idx->uni_offset_n = (debwt_count_t*)_err_calloc((h_idx->uni_tol_count),  sizeof(debwt_count_t));
@@ -47,6 +48,7 @@ void hash_free(hash_idx *h_idx)
     free(h_idx->kmer_node); free(h_idx->kmer_num); free(h_idx->kmer_c);
     free(h_idx->skmer_node); free(h_idx->skmer_num); free(h_idx->skmer_c);
 
+    free(h_idx->uni_id);
     free(h_idx->uni_offset_n); free(h_idx->uni_offset);
     free(h_idx->uni_offset_c); free(h_idx->uni_node);
 }
@@ -317,55 +319,16 @@ void cur_count_spe_kmer(kmer_int_t kmerInt, hash_int_t hashKey, kmer_num_t k_i, 
     set_spe(h->kmer_node+h->kmer_c[hashKey]+k_i, *h);
 }
 
-// sort by kInt
-void update_uni_offc_by_int(hash_idx *h, kmer_int_t kInt, int off_c, int ef)
+void update_uni_node(hash_idx *h, kmer_int_t kInt)
 {
-    debwt_count_t k_i;
-    if (ef) { // equal
-        // get k_i
-        if (!bin_hit_kInt(h->uni_node, h->uni_n, &k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node by kInt!\n");
-        h->uni_offset_c[k_i+1] += off_c;
-    } else {  // not equal
-        k_i = bin_search_kInt(h->uni_node, h->uni_n, kInt);
-        h->uni_n++;
-        if (h->uni_n > h->uni_m) {
-            // realloc
-            h->uni_m <<= 1;
-            h->uni_node = (kmer_int_t*)_err_realloc(h->uni_node, h->uni_m * sizeof(kmer_int_t));
-            h->uni_offset_c = (debwt_count_t*)_err_realloc(h->uni_offset_c, (h->uni_m+1) * sizeof(debwt_count_t));
-        }
-        // memmove node and offset_c
-        memmove(h->uni_node+k_i+1, h->uni_node+k_i, (h->uni_n-1-k_i)*sizeof(kmer_int_t));
-        memmove(h->uni_offset_c+k_i+2, h->uni_offset_c+k_i+1, (h->uni_n-1-k_i)*sizeof(debwt_count_t));
-        // add off_c|node 
-        h->uni_node[k_i] = kInt;
-        h->uni_offset_c[k_i+1] = off_c;
+    if (h->uni_n >= h->uni_m) {
+        h->uni_m <<= 1;
+        h->uni_node = (kmer_int_t*)_err_realloc(h->uni_node, h->uni_m * sizeof(kmer_int_t));
     }
+    h->uni_node[h->uni_n++] = kInt;
 }
-
-// sort by uid 
-void update_uni_offc_by_uid(hash_idx *h, kmer_int_t kInt)
-{
-    debwt_count_t k_i;
-    if (!bin_hit_kInt(h->uni_node+h->uni_t, h->uni_n-h->uni_t, &k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node by uid!\n");
-    debwt_count_t tmp_c = h->uni_offset_c[h->uni_t+k_i+1];
-    // memmove node and off_c
-    memmove(h->uni_node+h->uni_t+1, h->uni_node+h->uni_t, k_i * sizeof(kmer_int_t));
-    memmove(h->uni_offset_c+h->uni_t+2, h->uni_offset_c+h->uni_t+1, k_i * sizeof(debwt_count_t));
-    // update 
-    h->uni_node[h->uni_t] = kInt;
-    h->uni_offset_c[h->uni_t+1] = tmp_c + h->uni_offset_c[h->uni_t];
-    h->uni_t++;
-}
-
-debwt_count_t get_uid_from_off_c(hash_idx h, kmer_int_t kInt)
-{
-    debwt_count_t uid;
-    for (uid = 0; uid < h.uni_t; ++uid)
-        if (h.uni_node[uid] == kInt) return uid;
-    err_fatal_simple("ERROR: Cannot hit in uni_node by kInt!\n");
-    return 0;
-}
+int kInt_comp(const void *k1, const void *k2) { return (*(kmer_int_t*)k1) - (*(kmer_int_t*)k2); }
+void sort_uni_node(hash_idx *h) { qsort(h->uni_node, h->uni_n, sizeof(kmer_int_t), kInt_comp); }
 
 uint8_t update_hash(kmer_num_t k_i, uint8_t ef, hash_idx *h,
                     kmer_int_t kInt, hash_int_t hKey, remn_int_t kKey, 
@@ -394,10 +357,11 @@ uint8_t update_hash(kmer_num_t k_i, uint8_t ef, hash_idx *h,
                     // set bwt_char #
                     set_bwt_char(h->kmer_node+k_ns+k_i, nt_N, *h);
                     // uni_offset_c +2
-                    update_uni_offc_by_int(h, kInt, 2, 0);
+                    //update_uni_offc_by_int(h, kInt, 2, 0);
+                    update_uni_node(h, kInt);
                 } else {
                     // uni_offset_c +1
-                    update_uni_offc_by_int(h, kInt, 1, 1);
+                    //update_uni_offc_by_int(h, kInt, 1, 1);
                 }
             }
         }
@@ -418,7 +382,8 @@ uint8_t update_hash(kmer_num_t k_i, uint8_t ef, hash_idx *h,
                         // set_bwt_char(old_next_kmer, #)
                         set_bwt_char(h->kmer_node+h->kmer_c[old_next_hashKey]+old_next_k_i, nt_N, *h);
                         // uni_offset_c for old_next_kmer
-                        update_uni_offc_by_int(h, old_next_kmerInt, 1, 0); 
+                        //update_uni_offc_by_int(h, old_next_kmerInt, 1, 0); 
+                        update_uni_node(h, old_next_kmerInt);
                     }
                     // set next_char
                     set_next_char(h->kmer_node+k_ns+k_i, nt_N, *h);
@@ -441,7 +406,8 @@ uint8_t update_hash(kmer_num_t k_i, uint8_t ef, hash_idx *h,
         // N-in
         if (bwt_nt == nt_N) {
             // uni_offset_c
-            update_uni_offc_by_int(h, kInt, 1, 0);
+            //update_uni_offc_by_int(h, kInt, 1, 0);
+            update_uni_node(h, kInt);
         }
         // N-out
         if (n_nt == nt_N) {
@@ -451,7 +417,42 @@ uint8_t update_hash(kmer_num_t k_i, uint8_t ef, hash_idx *h,
     return next_spe_flag;
 }
 
-int gen_spe_hash(kmer_num_t k_i, hash_idx *h, de_bwt_t *de_idx, ref_offset_t ref_off, 
+void update_off_c(debwt_count_t k_i, hash_idx *h, kmer_int_t kInt, hash_int_t hashKey)
+{
+    debwt_count_t k_ns = h->kmer_c[hashKey];
+    kmer_node_t k_node = h->kmer_node[k_ns+k_i];
+    if (get_bwt_char(k_node, *h) >= nt_N) {
+        debwt_count_t uni_k_i;
+        if (!bin_hit_kInt(h->uni_node, h->uni_n, &uni_k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node by uid!\n");
+        h->uni_offset_c[uni_k_i]++;
+    }
+}
+
+void hash_off_c_check(hash_idx *h, kmer_int_t kInt)
+{
+    hash_int_t hashKey = first_n_bits(hash_int_t, kInt, (h->hp.k)<<1, h->hp.hash_n);
+    remn_int_t kmerKey = last_n_bits(remn_int_t, kInt, _int_size, h->hp.remn_n);
+    debwt_count_t k_i;
+    if (!bin_hit_kmer(&k_i, h, hashKey, kmerKey)) err_fatal_simple("ERROR: Cannot hit in hash-table!\n");
+    update_off_c(k_i, h, kInt, hashKey);
+}
+
+debwt_count_t get_uid_from_uni_node(hash_idx h, kmer_int_t kInt, debwt_count_t *uni_k_i)
+{
+    if (!bin_hit_kInt(h.uni_node, h.uni_n, uni_k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node!\n");
+    return h.uni_id[*uni_k_i];
+}
+
+void update_uni_node_by_uid(hash_idx *h, kmer_int_t kInt, debwt_count_t *uni_k_i)
+{
+    if (!bin_hit_kInt(h->uni_node, h->uni_n, uni_k_i, kInt)) err_fatal_simple("ERROR: Cannot hit in uni_node!\n");
+    debwt_count_t tmp = h->uni_offset_c[*uni_k_i];
+    h->uni_offset_c[*uni_k_i] = h->next_offset_c;
+    h->next_offset_c += tmp;
+    h->uni_id[*uni_k_i] = h->cur_uid;
+}
+
+void gen_spe_hash(kmer_num_t k_i, hash_idx *h, de_bwt_t *de_idx, ref_offset_t ref_off, 
                  hash_int_t hashKey, remn_int_t kmerKey, 
                  uint8_t p_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i)
 {
@@ -468,17 +469,17 @@ int gen_spe_hash(kmer_num_t k_i, hash_idx *h, de_bwt_t *de_idx, ref_offset_t ref
 #endif
     // uid, uni_offset XXX
     if (get_bwt_char(k_node, *h) >= nt_N) { // new unipath , update (cur_uid and last_uid), U_offset, U_num
+        debwt_count_t uni_k_i;
         h->last_uid = h->cur_uid;
         if (get_uni_off_flag(k_node, *h)) { // offset_c alread updated
-            h->cur_uid = get_uid_from_off_c(*h, kmerInt);
+            h->cur_uid = get_uid_from_uni_node(*h, kmerInt, &uni_k_i);
         } else { // need to update uid and offset_c
             h->cur_uid = h->next_uid++;
-            update_uni_offc_by_uid(h, kmerInt);
+            update_uni_node_by_uid(h, kmerInt, &uni_k_i);
             set_uni_off_flag(h->kmer_node+k_ns+k_i, *h);
         }
         // update u_offset
-        h->uni_offset[h->uni_offset_c[h->cur_uid]+h->uni_offset_n[h->cur_uid]++] = ref_off;
-        err_printf("ref: %d\n", ref_off);
+        h->uni_offset[h->uni_offset_c[uni_k_i]+h->uni_offset_n[h->cur_uid]++] = ref_off;
     } 
                                                      // has been set_spe in the pre run
     if (get_bwt_char(k_node, *h) >= nt_N && p_nt != nt_N && get_spe(h->kmer_node[h->kmer_c[pre_hashKey]+pre_k_i], *h)) {
@@ -511,7 +512,6 @@ int gen_spe_hash(kmer_num_t k_i, hash_idx *h, de_bwt_t *de_idx, ref_offset_t ref
         // generate bwt_char for ^#-kmer
         kputc(BWT_STR[first_n_bits(uint8_t, s_kmerInt, (h->hp.k)<<1, 2)], de_idx->bwt_str);
     }
-    return 1;    
 }
 
 uint8_t hash_check(hash_idx *h, kmer_int_t kInt, 
@@ -543,7 +543,7 @@ kmer_num_t hash_spe_check(hash_idx *h, de_bwt_t *de_idx, ref_offset_t ref_off, k
     kmerKey = last_n_bits(remn_int_t, kmerInt, _int_size, h->hp.remn_n);
 
     if (!bin_hit_kmer(&k_i, h, *hashKey, kmerKey)) err_fatal_simple("ERROR: Cannot hit in hash-table!\n");
-    if (!gen_spe_hash(k_i, h, de_idx, ref_off, *hashKey, kmerKey, p_nt, pre_hashKey, pre_k_i)) err_fatal_simple("ERROR: hash-update fail!\n");
+    gen_spe_hash(k_i, h, de_idx, ref_off, *hashKey, kmerKey, p_nt, pre_hashKey, pre_k_i);
     return k_i;
 }
 
@@ -603,8 +603,9 @@ int kmer_tol_count(const char *prefix, hash_idx *h_idx)
 
 /* Second-run :                                      *
  * 1. generat and sort normal kmer                   *
- * 2. count the total number of special kmer         *
- * 3. count the total number of unipath and u_offset */
+ * 2. count the total number of special kmer/unipath *
+ * 3. stat the uni_node                              *
+ * 4. count the number of offset for uni_node        */
 int kmer_gen(const char *prefix, hash_idx *h_idx)
 {
     gzFile fp; kseq_t *fa_seq;
@@ -618,38 +619,45 @@ int kmer_gen(const char *prefix, hash_idx *h_idx)
         cur_spe_flag = 0;
         err_printf("[%s] Generating and sorting kmer for %s ...\n",__func__, fa_seq->name.s);
         if (get_first_kmer(fa_seq, &seq_i, h_idx->hp.k, &kmerInt, &next_nt)) {        // first kmer
-#ifdef __DEBUG__
-                err_printf("seq_i: %d\n", seq_i);
-#endif
             next_spe_flag = hash_check(h_idx, kmerInt, nt_N, pre_hashKey, pre_k_i, &cur_hashKey, &cur_k_i, next_nt, cur_spe_flag);
-            cur_spe_flag = next_spe_flag;
-            pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
+            cur_spe_flag = next_spe_flag; pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
             while (get_shift_kmer(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.k_m, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
-#ifdef __DEBUG__
-                err_printf("seq_i: %d\n", seq_i);
-#endif
                 next_spe_flag = hash_check(h_idx, kmerInt, pre_nt, pre_hashKey, pre_k_i, &cur_hashKey, &cur_k_i, next_nt, cur_spe_flag);
-                cur_spe_flag = next_spe_flag;
-                pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
+                cur_spe_flag = next_spe_flag; pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
             }
         }
     }
-    
-    err_printf("[%s] Generating and sorting done!\n",__func__);
+    kseq_destroy(fa_seq); err_gzclose(fp);
+    /* 4. */
+    fp = xzopen(prefix, "r"); fa_seq = kseq_init(fp);
+    sort_uni_node(h_idx);
+    h_idx->uni_offset_c = (debwt_count_t*)_err_calloc((h_idx->uni_n), sizeof(debwt_count_t));
+    while (kseq_read(fa_seq) >= 0) {
+        seq_i = 0;
+        err_printf("[%s] Calculating off_c for %s ...\n",__func__, fa_seq->name.s);
+        if (get_first_kmer(fa_seq, &seq_i, h_idx->hp.k, &kmerInt, &next_nt)) {        // first kmer
+            hash_off_c_check(h_idx, kmerInt);
+            while (get_shift_kmer(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.k_m, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
+                hash_off_c_check(h_idx, kmerInt);
+            }
+        }
+    }
+
+    err_printf("[%s] Generating and calculating done!\n",__func__);
     debwt_count_t k_count=0, uo_count=0, sk_count=0, k_ns;
-    uint32_t i, j;
+    uint32_t i;
     for (i = 0; i < h_idx->hp.hash_size; ++i) {
         k_count += h_idx->kmer_num[i];
         k_ns = h_idx->kmer_c[i];
-        for (j = 0; j < h_idx->kmer_num[i]; ++j) {
 #ifdef __DEBUG__
+        uint32_t j;
+        for (j = 0; j < h_idx->kmer_num[i]; ++j) {
             cons_kmer(h_idx->kmer_node[k_ns+j], i, *h_idx); // output kmer
-#endif
         }
+#endif
     }
     h_idx->kmer_real_count = k_count; // real count of normal kmer. kmer_tol_count is the collision-free count number
-
-    for (i = 1; i < h_idx->uni_n+1; ++i) uo_count += h_idx->uni_offset_c[i];
+    for (i = 0; i < h_idx->uni_n; ++i) uo_count += h_idx->uni_offset_c[i];
     h_idx->off_tol_count = uo_count;
 
     err_printf("[%s] Total normal kmer real count: %lld\n",__func__, (long long)k_count);
@@ -752,7 +760,11 @@ int kmer_merge(hash_idx h_idx, de_bwt_t *de_idx)
         }
     }
     // uni_offset_c, uni_offset
-    for (i = 0; i <= de_idx->n_unipath; ++i)  de_idx->uni_offset_c[i] = h_idx.uni_offset_c[i];
+    de_idx->uni_offset_c[0] = 0; j = 0;
+    for (i = 1; i <= de_idx->n_unipath; ++i) {
+        de_idx->uni_offset_c[i] = h_idx.uni_offset_n[i-1]+j;
+        j = de_idx->uni_offset_c[i];
+    }
     for (i = 0; i < de_idx->n_offset; ++i) de_idx->uni_offset[i] = h_idx.uni_offset[i];
 #ifdef __DEBUG__
     for (i = 0; i < h_idx.hp.hash_size; ++i) {

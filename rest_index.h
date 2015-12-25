@@ -56,12 +56,12 @@ typedef struct {
                  // same to kmer_node, size: kmer_tol_count
     debwt_count_t *uni_offset_c; // (cumulative) number of offsets for each unipath
     kmer_int_t *uni_node;
-    debwt_count_t uni_n, uni_m, uni_t;
+    debwt_count_t uni_n, uni_m;
     debwt_count_t next_offset_c;
                  // same to kmer_num/skmer_num, size: uni_tol_count
     debwt_count_t *uni_offset_n;
                  // smae to kmer_node, size: kmer_tol_count
-    //debwt_count_t *uni_id;       // UID of normal kmer
+    debwt_count_t *uni_id;       // UID of normal kmer
     debwt_count_t last_uid, cur_uid, next_uid;
                  // smae to skmer_node
     ref_offset_t  *uni_offset;   // 1-base
