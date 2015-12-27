@@ -14,7 +14,7 @@ void hash_free(hash_idx *h_idx);
 
 int kmer_tol_count(const char *prefix, hash_idx *h_idx);
 int kmer_gen(const char *prefix, hash_idx *h_idx);
-int spe_kmer_gen(const char *prefix, hash_idx *h_idx, de_bwt_t *de_idx);
-int kmer_merge(hash_idx h_idx, de_bwt_t *de_idx);
+int spe_kmer_gen(const char *prefix, hash_idx *h_idx, debwt_t *de_idx);
+int kmer_merge(hash_idx h_idx, debwt_t *de_idx);
 
 #endif

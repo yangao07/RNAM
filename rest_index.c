@@ -5,7 +5,7 @@
 #include <math.h>
 #include <zlib.h>
 #include "rest_index.h"
-#include "build_de_bwt.h"
+#include "build_debwt.h"
 #include "bntseq.h"
 #include "utils.h"
 //#include "error.h"
@@ -170,7 +170,7 @@ int rest_index(int argc, char *argv[])
 {
     char *prefix=0; int c;
 
-    hash_idx h_idx; de_bwt_t de_idx;
+    hash_idx h_idx; debwt_t de_idx;
 
     //hash_init_idx_para(&h_idx);
     hash_init_idx32_para(&h_idx);
@@ -195,8 +195,8 @@ int rest_index(int argc, char *argv[])
         err_gzclose(fp);
     }*/
     { // generate de Bruijn graph and BWT
-        build_de_bwt(prefix, &h_idx, &de_idx);
-        de_bwt_free(&de_idx);
+        build_debwt(prefix, &h_idx, &de_idx);
+        debwt_free(&de_idx);
     }
     free(prefix);
     return 0;
