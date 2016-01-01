@@ -98,6 +98,7 @@ typedef struct {
 #define _BWT_OCC_B 3     // 9=2^3+1
 #define _SA_INV 32
 #define _SA_INV_B 5
+#define _SA_INV_M 0x1f
 // default schema of SA
 // normal SA:
 // special SA:
@@ -120,20 +121,17 @@ typedef struct {
     debwt_int_t   *bwt;          // bwt_str & OCC
     debwt_int_t   bwt_unit;      // for push_bwt
     debwt_count_t bwt_i, bwt_k;  // index of bwt_str and bwt
-    uint8_t bit_table[256];
-
-    //XXX
-    kstring_t     *bwt_str;      // bwt_str
+    uint8_t bit_table16[65536];
+    //uint8_t bit_table32[536870912]; // pow(2,19)
 
     debwt_count_t n_unipath;     // total count of unipath
     debwt_count_t n_offset;      // total count of offsets
-    //XXX
-    debwt_count_t *uni_id;
+
     debwt_count_t n_sa, n_s_sa;
-    debwt_int_t   *sa_uid, *s_sa_uid; // normal SA and special SA for all the '#-bwt_char'
-    //XXX
+    debwt_count_t *sa_uid, *sa_u_off; 
+    debwt_count_t *s_sa_uid;     // normal SA and special SA for all the '#-bwt_char'
+
     debwt_count_t *uni_offset_c; // cumulative number of offsets for each unipath
-    //XXX
     ref_offset_t  *uni_offset;   // offsets of each unipath
     debwt_count_t C[_OCC_C];     // cumulative count of 'A/C/G/T/#'
                                  // after update: [0]: num of #

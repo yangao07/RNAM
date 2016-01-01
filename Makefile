@@ -3,7 +3,7 @@ CFLAGS  = -O3 -c -Wall
 DFLAGS  = -g -Wall
 LDFLAGS = -lz -lm -lpthread
 
-SOURCE  = main.c rest_index.c rest_aln.c build_debwt.c bntseq.c kmer_hash.c utils.c kstring.c
+SOURCE  = main.c rest_index.c rest_aln.c debwt.c bntseq.c kmer_hash.c utils.c kstring.c
 OBJS    = $(SOURCE:.c=.o)
 
 PROG    = rest
