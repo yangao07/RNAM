@@ -11,10 +11,12 @@
 void hash_init_num(hash_idx *h_idx);
 void hash_init_node(hash_idx *h_idx);
 void hash_free(hash_idx *h_idx);
+void hash_free0(hash_idx *h_idx);
+void hash_free1(hash_idx *h_idx);
 
 int kmer_tol_count(const char *prefix, hash_idx *h_idx);
 int kmer_gen(const char *prefix, hash_idx *h_idx);
 int spe_kmer_gen(const char *prefix, hash_idx *h_idx, debwt_t *de_idx);
-int kmer_merge(hash_idx h_idx, debwt_t *de_idx);
+int kmer_merge(hash_idx *h_idx, debwt_t *de_idx);
 
 #endif
