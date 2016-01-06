@@ -37,9 +37,10 @@ typedef struct {
 #define kmer_num_t uint32_t  // for each hashKey
 #define kmer_node_t uint32_t 
 #define _KMER_NODE_SIZE 32 
-#define debwt_count_t uint32_t
-#define ref_offset_t uint32_t // for forward-only
-//#define ref_offset_t uint64_t // for forward and reverse
+//#define debwt_count_t uint32_t // for forward-only
+#define debwt_count_t uint64_t // for forward and reverse
+//#define ref_offset_t uint32_t // for forward-only
+#define ref_offset_t uint64_t // for forward and reverse
 #define skmer_node_t uint32_t
 
 #define debwt_pac_t uint8_t
@@ -48,7 +49,6 @@ typedef struct {
     hash_para hp;               // hash_para
     
     /* hash index for normal kmer */
-    // [key+1]: num/m of key
     debwt_count_t *kmer_c;       // [0]=0, [i] = cumu_count of kmer
     kmer_num_t    *kmer_num;     // whole count of existing kmer
     debwt_count_t kmer_tol_count;

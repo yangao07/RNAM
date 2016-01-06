@@ -16,7 +16,7 @@
 char BWT_STR[9] = "ACGTNNNN";
 extern unsigned char nst_nt4_table[256];
 
-#define _COUNT_S 10000000
+#define _COUNT_S 100000000
 
 void debwt_kmer_hash_init_num(hash_idx *h_idx)
 {
@@ -460,7 +460,7 @@ void hash_off_c_check(hash_idx *h, kmer_int_t kInt)
 {
     hash_int_t hashKey = first_n_bits(hash_int_t, kInt, (h->hp.k)<<1, h->hp.hash_n);
     remn_int_t kmerKey = last_n_bits(remn_int_t, kInt, _KMER_INT_SIZE, h->hp.remn_n);
-    debwt_count_t k_i;
+    kmer_num_t k_i;
     if (!bin_hit_kmer(&k_i, h, hashKey, kmerKey)) err_fatal_simple("ERROR: Cannot hit in hash-table!\n");
 #ifdef __DEBUG__
     stdout_printf("k_i %d\n", k_i);
@@ -614,13 +614,14 @@ int pac_count_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx)
         }
     }
 
-    debwt_count_t count=0; uint32_t i;
+    debwt_count_t k_count=0; uint32_t i; uint32_t max_remn_n = pow(4, h_idx->hp.remn_k);
     for (i = 1; i < h_idx->hp.hash_size+1; ++i) {
-        count += h_idx->kmer_c[i];
-        h_idx->kmer_c[i] = count;
+        if (h_idx->kmer_c[i] > max_remn_n) h_idx->kmer_c[i] = max_remn_n;
+        k_count += h_idx->kmer_c[i];
+        h_idx->kmer_c[i] = k_count;
     }
-    err_printf("[%s] Total kmer count: %lld\n",__func__, (long long)count);
-    h_idx->kmer_tol_count = count;
+    err_printf("[%s] Total kmer count: %lld\n",__func__, (long long)k_count);
+    h_idx->kmer_tol_count = k_count;
     debwt_kmer_hash_init_node(h_idx);
     return 0;
 }
@@ -678,7 +679,9 @@ int pac_gen_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx)
     err_printf("[%s] Total normal kmer real count: %lld\n",__func__, (long long)k_count);
     err_printf("[%s] Total unipath offset count: %lld\n",__func__, (long long)uo_count);
 
+    uint32_t max_remn_n = pow(4, h_idx->hp.remn_k);
     for (i = 1; i < h_idx->hp.hash_size+1; ++i) {
+        if (h_idx->skmer_c[i] > max_remn_n) h_idx->skmer_c[i] = max_remn_n;
         sk_count += h_idx->skmer_c[i];
         h_idx->skmer_c[i] = sk_count;
     }

@@ -91,32 +91,31 @@ void debwt_free(debwt_t *db_idx)
 // sa_uid_i: 0-base sa index
 // off: 0-base offset from start of the unipath
 debwt_count_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, ref_offset_t *off);
-
 void print_debwt(debwt_t *db_idx)
 {
-    uint32_t i, j;
+    debwt_count_t i, j;
     stdout_printf("UID:\n");
     for (i = db_idx->n_unipath; i < db_idx->bwt_l; ++i) {
-        stdout_printf("%d: %d\t", i, debwt_sa(db_idx, i, &j));
-        stdout_printf("%d\n", j);
+        stdout_printf("%lld: %lld\t", (long long)i, (long long)debwt_sa(db_idx, i, &j));
+        stdout_printf("%lld\n",(long long)j);
     }
     /*
     for (i = 0; i < db_idx->bwt_l-db_idx->n_unipath; ++i) {
         fprintf(stdout, "# %d:\t%d\n", i+1, db_idx->uni_id[i]); 
     }*/
     stdout_printf("Uni_offset_c:\n");
-    for (i = 0; i < db_idx->n_unipath; ++i) stdout_printf("U_c %d:\t%d\n", i+1, db_idx->uni_offset_c[i+1]);
+    for (i = 0; i < db_idx->n_unipath; ++i) stdout_printf("U_c %lld:\t%lld\n", (long long)i+1, (long long)db_idx->uni_offset_c[i+1]);
     stdout_printf("Uni_offset:\n");
     for (i = 0; i < db_idx->n_unipath; ++i) {
-        stdout_printf("U %d:\t", i+1);
+        stdout_printf("U %lld:\t", (long long)i+1);
         for (j = db_idx->uni_offset_c[i]; j < db_idx->uni_offset_c[i+1]; ++j)
-            stdout_printf("%d ", db_idx->uni_offset[j]);
+            stdout_printf("%lld ",(long long)db_idx->uni_offset[j]);
         stdout_printf("\n");
     }
 
     stdout_printf("BWT-HASH:\n");
     for (i = 0; i < db_idx->bwt_hash_size; ++i) {
-        stdout_printf("%d: %d %d\n", i, db_idx->bwt_hash[i], db_idx->bwt_hash_il[i]);
+        stdout_printf("%lld: %lld %lld\n", (long long)i, (long long)db_idx->bwt_hash[i], (long long)db_idx->bwt_hash_il[i]);
     }
 }
 

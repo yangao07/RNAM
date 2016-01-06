@@ -32,9 +32,7 @@
 #define _SA_INV_M 0x1f
 
 //#define _BWT_HASH_K 13
-// default schema of SA
-// normal SA:
-// special SA:
+
 typedef struct {
     uint8_t occ_c;              
     uint8_t bwt_nt_k, bwt_nt_b, bwt_nt_m; 
@@ -49,7 +47,6 @@ typedef struct {
 typedef struct {
     //debwt_para dp;
     debwt_count_t bwt_l;         // length of bwt_str(seq_len)
-    //debwt_count_t n_occ;         // number of OCC
     debwt_count_t bwt_size;      // size of *bwt
     debwt_int_t   *bwt;          // bwt_str & OCC
     debwt_int_t   bwt_unit;      // for push_bwt
