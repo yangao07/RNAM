@@ -9,7 +9,7 @@ OBJS    = $(SOURCE:.c=.o)
 PROG    = rest
 DEBUG   = gdb_rest
 LIT     = lit_rest
-#DMARCRO = -D __DEBUG__
+DMARCRO = -D __DEBUG__
 LMARCRO = -D __LIT__
 
 all: $(SOURCE) $(PROG)

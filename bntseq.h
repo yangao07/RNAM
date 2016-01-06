@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <zlib.h>
 
+#include "rest_index.h"
+
 #ifndef BWA_UBYTE
 #define BWA_UBYTE
 typedef uint8_t ubyte_t;
@@ -55,6 +57,11 @@ extern "C" {
 	int bns_intv2rid(const bntseq_t *bns, int64_t rb, int64_t re);
     void pac2fa_core(const bntseq_t *bns, const uint8_t *pac, const int32_t seq_id, const int64_t start/*0-base*/, int32_t *len, uint8_t *seq);
     void pac2fa(const bntseq_t *bns, const uint8_t *pac, const int32_t seq_id, const int64_t start/*0-base*/, int32_t *len, char *seq);
+
+// use 4-bit to store A/C/G/T/N
+#define _debwt_set_pac(pac, l, c) ((pac)[(l)>>1] |= (c)<<((~(l)&1)<<2))
+#define _debwt_get_pac(pac, l) ((pac)[(l)>>1]>>((~(l)&1)<<2)&7)
+    debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, int for_only);
 
 #ifdef __cplusplus
 }

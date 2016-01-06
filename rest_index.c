@@ -17,7 +17,8 @@ int rest_index_usage(void)
     fprintf(stderr, "                    bulid index for <ref.fa>\n\n");
     fprintf(stderr, "Option:  \n");
     fprintf(stderr, "         -k [INT]     Length of kmer to construct de Bruijn graph. [Def=22]\n");
-    fprintf(stderr, "         -s [INT]     Length of first level's hashed sequence. [Def=12]\n");
+    //fprintf(stderr, "         -s [INT]     Length of first level's hashed sequence. [Def=12]\n");
+    fprintf(stderr, "         -f           Construct index ONLY for the forward strand of reference genome. [Def=false]\n");
     fprintf(stderr, "\n");
     return 0;
 }
@@ -168,18 +169,19 @@ void hash_reset_idx_para(hash_idx *h)
 
 int rest_index(int argc, char *argv[])
 {
-    char *prefix=0; int c;
+    char *prefix=0; int c, for_only=0;
 
     hash_idx h_idx; debwt_t de_idx;
 
     //hash_init_idx_para(&h_idx);
     hash_init_idx32_para(&h_idx);
 
-    while ((c = getopt(argc, argv, "k:")) >= 0)
+    while ((c = getopt(argc, argv, "k:f")) >= 0)
     {
         switch (c)
         {
             case 'k': h_idx.hp.k = atoi(optarg); break;
+            case 'f': for_only = 1; break;
             default: return rest_index_usage();
         }
     }
@@ -187,15 +189,19 @@ int rest_index(int argc, char *argv[])
     hash_reset_idx_para(&h_idx);
     prefix = strdup(argv[optind]);
 
-    /*{ // generate for&rev.pac
+    { // generate forward.pac
         gzFile fp = xzopen(prefix, "r");
         fprintf(stderr, "[%s] Pack genome FASTA ... ", __func__);
-        uint64_t l_pac = bns_fasta2bntseq(fp, prefix, 0);
+        bns_fasta2bntseq(fp, prefix, 1);
         fprintf(stderr, "done!\n");
         err_gzclose(fp);
-    }*/
+    }
     { // generate de Bruijn graph and BWT
-        build_debwt(prefix, &h_idx, &de_idx);
+        gzFile fp = xzopen(prefix, "r");
+        debwt_count_t l_pac;
+        debwt_pac_t *db_pac = debwt_gen_pac(fp, &l_pac, for_only); 
+        err_gzclose(fp);
+        pac_build_debwt(prefix, db_pac, l_pac, &h_idx, &de_idx);
     }
     free(prefix);
     return 0;

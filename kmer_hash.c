@@ -5,18 +5,20 @@
 #include <math.h>
 #include <zlib.h>
 #include "kmer_hash.h"
+#include "debwt.h"
 #include "rest_index.h"
 #include "debwt.h"
+#include "bntseq.h"
 #include "kseq.h"
-#include "utils.h"
+#include "utils.h" 
 #include "string.h"
-
-KSEQ_INIT(gzFile, gzread)
 
 char BWT_STR[9] = "ACGTNNNN";
 extern unsigned char nst_nt4_table[256];
 
-void hash_init_num(hash_idx *h_idx)
+#define _COUNT_S 10000000
+
+void debwt_kmer_hash_init_num(hash_idx *h_idx)
 {
     h_idx->kmer_num = (kmer_num_t*)_err_calloc(h_idx->hp.hash_size, sizeof(kmer_num_t));
     h_idx->kmer_c = (debwt_count_t*)_err_calloc(h_idx->hp.hash_size+1, sizeof(debwt_count_t));
@@ -25,7 +27,7 @@ void hash_init_num(hash_idx *h_idx)
     h_idx->skmer_c = (debwt_count_t*)_err_calloc(h_idx->hp.hash_size+1, sizeof(debwt_count_t));
 }
 
-void hash_init_node(hash_idx *h_idx)
+void debwt_kmer_hash_init_node(hash_idx *h_idx)
 {
     h_idx->kmer_node = (kmer_node_t*)_err_malloc(h_idx->kmer_tol_count * sizeof(kmer_node_t));
     //h_idx->uni_offset_c = (debwt_count_t*)_err_calloc(1025, sizeof(debwt_count_t));
@@ -33,7 +35,7 @@ void hash_init_node(hash_idx *h_idx)
     h_idx->uni_n = 0; h_idx->uni_m = 1024;
 }
 
-void hash_init_snode(hash_idx *h_idx)
+void debwt_kmer_hash_init_snode(hash_idx *h_idx)
 {
     h_idx->skmer_node = (skmer_node_t*)_err_malloc(h_idx->skmer_tol_count * sizeof(skmer_node_t));
 
@@ -44,7 +46,7 @@ void hash_init_snode(hash_idx *h_idx)
     h_idx->uni_offset = (debwt_count_t*)_err_malloc(h_idx->off_tol_count * sizeof(debwt_count_t));
 }
 
-void hash_free(hash_idx *h_idx)
+void dewbt_kmer_hash_free(hash_idx *h_idx)
 {
     free(h_idx->uni_id); free(h_idx->uni_node);
     free(h_idx->uni_offset_c); 
@@ -55,13 +57,13 @@ void hash_free(hash_idx *h_idx)
     free(h_idx->uni_offset_n); free(h_idx->uni_offset);
 }
 
-void hash_free0(hash_idx *h_idx)
+void debwt_kmer_hash_free0(hash_idx *h_idx)
 {
     free(h_idx->uni_id); free(h_idx->uni_node);
     free(h_idx->uni_offset_c); 
 }
 
-void hash_free1(hash_idx *h_idx)
+void debwt_kmer_hash_free1(hash_idx *h_idx)
 {
     free(h_idx->kmer_node); free(h_idx->kmer_num); free(h_idx->kmer_c);
     free(h_idx->skmer_node); free(h_idx->skmer_num); free(h_idx->skmer_c);
@@ -69,9 +71,9 @@ void hash_free1(hash_idx *h_idx)
     free(h_idx->uni_offset_n); free(h_idx->uni_offset);
 }
 
-void cons_kmer(kmer_node_t n, hash_int_t hashKey, hash_idx h)
+void cons_kmer(kmer_node_t n, hash_int_t hashKey, hash_idx *h)
 {
-    uint8_t k = h.hp.k, remn_n = h.hp.remn_n, remn_m = h.hp.remn_m, remn_ni = h.hp.remn_ni;
+    uint8_t k = h->hp.k, remn_n = h->hp.remn_n, remn_m = h->hp.remn_m, remn_ni = h->hp.remn_ni;
     char *seq = (char*)malloc(k+1);
     kmer_int_t all = hashKey;
     all = (all << remn_n) | ((n>>(remn_ni))&remn_m);
@@ -97,33 +99,56 @@ void con_kmer(kmer_int_t all, uint8_t k)
     free(seq);
 } 
 
-int get_first_kmer(kseq_t *seq, ref_offset_t *seq_i, uint8_t k, kmer_int_t *kmer, uint8_t *next_nt)
+int debwt_pac_first_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t *seq_i, hash_para hp, kmer_int_t *kmer, uint8_t *next_nt)
 {
-    ref_offset_t k_i = 0, i = *seq_i;
-    uint8_t nt;
+    uint8_t nt, k = hp.k; debwt_count_t k_i = 0, i = *seq_i;
+
     *kmer = 0;
-    while (i < seq->seq.l) {
-        nt = nst_nt4_table[(int)seq->seq.s[i++]];
+    while (i < l_pac) {
+        nt = _debwt_get_pac(db_pac, i); ++i;
         if (nt != nt_N) {
             (*kmer) = (*kmer) << 2 | nt;
             k_i++;
-        } else {
-            k_i = 0; *kmer = 0;
-        }
+        } else k_i = 0, *kmer = 0; 
         if (k_i == k) break;
     }
     *seq_i = i;
-    *next_nt = nst_nt4_table[(int)seq->seq.s[i]];
+    *next_nt = _debwt_get_pac(db_pac, i);
     return (k_i == k);
 }
 
-int get_first_kmer_hashKey(kseq_t *seq, int *seq_i, uint8_t k, uint8_t hash_k,  hash_int_t *hashKey, uint8_t *next_hashKey_nt, uint8_t *next_nt)
+int debwt_pac_shift_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t *seq_i, hash_para hp, kmer_int_t *kmer, uint8_t *pre_nt, uint8_t *next_nt)
 {
-    int hash_k_i = 0, k_i = 0, i = *seq_i;
+    uint8_t k = hp.k; kmer_int_t k_m = hp.k_m;
+
+    debwt_count_t i = *seq_i;
+    while (i < l_pac) {
+        i++;
+        if (*next_nt != nt_N) {
+            *pre_nt = (*kmer) >> ((k-1)<<1);
+            (*kmer) = ((*kmer) << 2 | (*next_nt)) & k_m; // 44 
+            if (i == l_pac) *next_nt = nt_N;
+            else *next_nt = _debwt_get_pac(db_pac, i);
+            *seq_i = i;
+            return 1;
+        } else {
+            *seq_i = i;
+            if (!debwt_pac_first_kmer(db_pac, l_pac, seq_i, hp, kmer, next_nt)) return 0;
+            *pre_nt = nt_N;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int debwt_pac_first_kmer_hashKey(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t *seq_i, hash_para hp, hash_int_t *hashKey, uint8_t *next_hashKey_nt, uint8_t *next_nt)
+{
+    uint8_t k = hp.k, hash_k = hp.hash_k;
+    int hash_k_i = 0, k_i = 0; debwt_count_t i = *seq_i;
     uint8_t nt;
-    *hashKey = 0;
-    while (i < (int)seq->seq.l) {
-        nt = nst_nt4_table[(int)seq->seq.s[i++]];
+    *hashKey=0;
+    while (i < l_pac) {
+        nt = _debwt_get_pac(db_pac, i); i++;
         if (nt != nt_N) {
             if (hash_k_i < hash_k) {
                 (*hashKey) = (*hashKey) << 2 | nt;
@@ -136,51 +161,41 @@ int get_first_kmer_hashKey(kseq_t *seq, int *seq_i, uint8_t k, uint8_t hash_k,  
         if (k_i == k) break;
     }
     *seq_i = i;
-    *next_hashKey_nt = nst_nt4_table[(int)seq->seq.s[i-k+hash_k]];
-    *next_nt = nst_nt4_table[(int)seq->seq.s[i]];
+    *next_hashKey_nt = _debwt_get_pac(db_pac, i-k+hash_k);
+    *next_nt = _debwt_get_pac(db_pac, i);
     return (k_i == k);
 }
 
-int get_shift_kmer(kseq_t *seq, ref_offset_t *seq_i, uint8_t k, kmer_int_t k_m, kmer_int_t *kmer, uint8_t *pre_nt, uint8_t *next_nt)
+int debwt_pac_shift_kmer_hashKey(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t *seq_i, hash_para hp, hash_int_t *hashKey, uint8_t *next_hashKey_nt, uint8_t *next_nt)
 {
-    ref_offset_t i = *seq_i;
-    while (i < seq->seq.l) {
-        i++;
-        if (*next_nt != nt_N) {
-            *pre_nt = (*kmer) >> ((k-1)<<1);
-            (*kmer) = ((*kmer) << 2 | (*next_nt)) & k_m; // 44 
-            if (i == seq->seq.l) *next_nt = nt_N;
-            else *next_nt = nst_nt4_table[(int)seq->seq.s[i]];
-            *seq_i = i;
-            return 1;
-        } else {
-            *seq_i = i;
-            if (!get_first_kmer(seq, seq_i, k, kmer, next_nt)) return 0;
-            *pre_nt = nt_N;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-int get_shift_kmer_hashKey(kseq_t *seq, int *seq_i, uint8_t k, uint8_t hash_k, kmer_int_t hash_k_m, hash_int_t *hashKey, uint8_t *next_hashKey_nt, uint8_t *next_nt)
-{
-    size_t i = *seq_i;
-    while (i < seq->seq.l) {
+    uint8_t k = hp.k, hash_k = hp.hash_k;
+    kmer_int_t hash_k_m = hp.hash_m;
+    debwt_count_t i = *seq_i;
+    while (i < l_pac) {
         i++;
         if (*next_nt != nt_N) {
             (*hashKey) = ((*hashKey) << 2 | (*next_hashKey_nt)) & hash_k_m;
-            if (i == seq->seq.l) *next_nt = nt_N;
+            if (i == l_pac) *next_nt = nt_N;
             else {
-                *next_nt = nst_nt4_table[(int)seq->seq.s[i]];
-                *next_hashKey_nt = nst_nt4_table[(int)seq->seq.s[i-k+hash_k]];
+                *next_nt = _debwt_get_pac(db_pac, i);
+                *next_hashKey_nt = _debwt_get_pac(db_pac, i-k+hash_k);
             }
             *seq_i = i;
             return 1;
         } else {
             *seq_i = i;
-            return get_first_kmer_hashKey(seq, seq_i, k, hash_k, hashKey, next_hashKey_nt, next_nt);
+            return debwt_pac_first_kmer_hashKey(db_pac, l_pac, seq_i, hp, hashKey, next_hashKey_nt, next_nt);
         }
+    }
+    return 0;
+}
+
+int get_hash_nt(uint8_t *hash_nt, int hashKey, uint8_t hash_k)
+{
+    int i;
+    for (i = hash_k-1; i >= 0; --i) {
+        hash_nt[i] = hashKey & 0x3;
+        hashKey >>= 2;
     }
     return 0;
 }
@@ -206,9 +221,6 @@ int get_shift_kmer_hashKey(kseq_t *seq, int *seq_i, uint8_t k, uint8_t hash_k, k
 
 #define set_uni_off_flag(n, h) { (*(n)) |= (1 << ((h).hp.uni_off_flag_ni)); }
 #define get_uni_off_flag(n, h) (((n) >> ((h).hp.uni_off_flag_ni)) & ((h).hp.uni_off_m))
-
-//#define set_kmer_uid(n, uid, h) { (*(n)) |= ((uid) << ((h)->hp.uid_ni)); }
-//#define get_kmer_uid(n, h) (((n) >> ((h).hp.uid_ni)) & ((h).hp.uid_m))
 
 kmer_num_t bin_search_kmer(uint8_t *ef, hash_idx *h, hash_int_t hashKey, remn_int_t kmerKey)
 {
@@ -589,21 +601,19 @@ void sort_spe_kmer(hash_idx *h)
 
 /* First-run :                       *
  * 1. count the total number of kmer */
-int kmer_tol_count(const char *prefix, hash_idx *h_idx)
+int pac_count_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx)
 {
-    gzFile fp; kseq_t *fa_seq;
-    fp = xzopen(prefix, "r"); fa_seq = kseq_init(fp);
-    hash_int_t hashKey; int seq_i; uint8_t next_hashKey_nt, next_nt;
+    debwt_count_t seq_i; hash_int_t hashKey; uint8_t next_hashKey_nt, next_nt;
 
-    while (kseq_read(fa_seq) >= 0) {
-        seq_i = 0;
-        err_printf("[%s] Counting kmer for %s ...\n",__func__, fa_seq->name.s);
-        if (get_first_kmer_hashKey(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.hash_k, &hashKey, &next_hashKey_nt, &next_nt)) {
-            h_idx->kmer_c[hashKey+1]++; // kmer_c[0] = 0;
-            while (get_shift_kmer_hashKey(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.hash_k, h_idx->hp.hash_m, &hashKey, &next_hashKey_nt, &next_nt))
-                h_idx->kmer_c[hashKey+1]++; // kmer_c[0] = 0;
+    seq_i = 0;
+    if (debwt_pac_first_kmer_hashKey(db_pac, l_pac, &seq_i, h_idx->hp, &hashKey, &next_hashKey_nt, &next_nt)) {
+        h_idx->kmer_c[hashKey+1]++;
+        while (debwt_pac_shift_kmer_hashKey(db_pac, l_pac, &seq_i, h_idx->hp, &hashKey, &next_hashKey_nt, &next_nt)) {
+            h_idx->kmer_c[hashKey+1]++;
+            if (seq_i % _COUNT_S == 0) err_printf("[%s] Counting kmer: %lld bp done.\n",__func__, (long long)seq_i);
         }
     }
+
     debwt_count_t count=0; uint32_t i;
     for (i = 1; i < h_idx->hp.hash_size+1; ++i) {
         count += h_idx->kmer_c[i];
@@ -611,8 +621,7 @@ int kmer_tol_count(const char *prefix, hash_idx *h_idx)
     }
     err_printf("[%s] Total kmer count: %lld\n",__func__, (long long)count);
     h_idx->kmer_tol_count = count;
-    hash_init_node(h_idx);
-    kseq_destroy(fa_seq); err_gzclose(fp);
+    debwt_kmer_hash_init_node(h_idx);
     return 0;
 }
 
@@ -621,40 +630,31 @@ int kmer_tol_count(const char *prefix, hash_idx *h_idx)
  * 2. count the total number of special kmer/unipath *
  * 3. stat the uni_node                              *
  * 4. count the number of offset for uni_node        */
-int kmer_gen(const char *prefix, hash_idx *h_idx)
+int pac_gen_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx)
 {
-    gzFile fp; kseq_t *fa_seq;
-    fp = xzopen(prefix, "r"); fa_seq = kseq_init(fp);
-
-    kmer_int_t kmerInt; ref_offset_t seq_i; uint8_t pre_nt, next_nt, cur_spe_flag, next_spe_flag;
+    kmer_int_t kmerInt; debwt_count_t seq_i; uint8_t pre_nt, next_nt, cur_spe_flag, next_spe_flag;
     hash_int_t pre_hashKey, cur_hashKey; kmer_num_t pre_k_i, cur_k_i;
 
-    while (kseq_read(fa_seq) >= 0) {
-        seq_i = 0;
-        cur_spe_flag = 0;
-        err_printf("[%s] Generating and sorting kmer for %s ...\n",__func__, fa_seq->name.s);
-        if (get_first_kmer(fa_seq, &seq_i, h_idx->hp.k, &kmerInt, &next_nt)) {        // first kmer
-            next_spe_flag = hash_check(h_idx, kmerInt, nt_N, pre_hashKey, pre_k_i, &cur_hashKey, &cur_k_i, next_nt, cur_spe_flag);
+    seq_i = 0; cur_spe_flag = 0;
+    if (debwt_pac_first_kmer(db_pac, l_pac, &seq_i, h_idx->hp, &kmerInt, &next_nt)) {        // first kmer
+        next_spe_flag = hash_check(h_idx, kmerInt, nt_N, 0, 0, &cur_hashKey, &cur_k_i, next_nt, cur_spe_flag);
+        cur_spe_flag = next_spe_flag; pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
+        while (debwt_pac_shift_kmer(db_pac, l_pac, &seq_i, h_idx->hp, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
+            next_spe_flag = hash_check(h_idx, kmerInt, pre_nt, pre_hashKey, pre_k_i, &cur_hashKey, &cur_k_i, next_nt, cur_spe_flag);
             cur_spe_flag = next_spe_flag; pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
-            while (get_shift_kmer(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.k_m, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
-                next_spe_flag = hash_check(h_idx, kmerInt, pre_nt, pre_hashKey, pre_k_i, &cur_hashKey, &cur_k_i, next_nt, cur_spe_flag);
-                cur_spe_flag = next_spe_flag; pre_hashKey = cur_hashKey; pre_k_i = cur_k_i;
-            }
+            if (seq_i % _COUNT_S == 0) err_printf("[%s] Generating and sorting kmer: %lld bp done.\n",__func__, (long long)seq_i);
         }
     }
-    kseq_destroy(fa_seq); err_gzclose(fp);
     /* 4. */
-    fp = xzopen(prefix, "r"); fa_seq = kseq_init(fp);
     sort_uni_node(h_idx);
     h_idx->uni_offset_c = (debwt_count_t*)_err_calloc((h_idx->uni_n), sizeof(debwt_count_t));
-    while (kseq_read(fa_seq) >= 0) {
-        seq_i = 0;
-        err_printf("[%s] Calculating off_c for %s ...\n",__func__, fa_seq->name.s);
-        if (get_first_kmer(fa_seq, &seq_i, h_idx->hp.k, &kmerInt, &next_nt)) {        // first kmer
+
+    seq_i = 0;
+    if (debwt_pac_first_kmer(db_pac, l_pac, &seq_i, h_idx->hp, &kmerInt, &next_nt)) {        // first kmer
+        hash_off_c_check(h_idx, kmerInt);
+        while (debwt_pac_shift_kmer(db_pac, l_pac, &seq_i, h_idx->hp, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
             hash_off_c_check(h_idx, kmerInt);
-            while (get_shift_kmer(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.k_m, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
-                hash_off_c_check(h_idx, kmerInt);
-            }
+            if (seq_i % _COUNT_S == 0) err_printf("[%s] Calculating offset count: %lld bp done.\n",__func__, (long long)seq_i);
         }
     }
 
@@ -667,7 +667,7 @@ int kmer_gen(const char *prefix, hash_idx *h_idx)
         uint32_t j;
         debwt_count_t k_ns = h_idx->kmer_c[i];
         for (j = 0; j < h_idx->kmer_num[i]; ++j) {
-            cons_kmer(h_idx->kmer_node[k_ns+j], i, *h_idx); // output kmer
+            cons_kmer(h_idx->kmer_node[k_ns+j], i, h_idx); // output kmer
         }
 #endif
     }
@@ -686,8 +686,7 @@ int kmer_gen(const char *prefix, hash_idx *h_idx)
     h_idx->uni_tol_count = sk_count / (h_idx->hp.k-1);
 
     err_printf("[%s] Total unipath count: %lld\n",__func__, (long long)h_idx->uni_tol_count);
-    hash_init_snode(h_idx); 
-    kseq_destroy(fa_seq); err_gzclose(fp);
+    debwt_kmer_hash_init_snode(h_idx); 
     return 0;
 }
 
@@ -696,49 +695,36 @@ int kmer_gen(const char *prefix, hash_idx *h_idx)
  * 2. generate UID                 *
  * 3. generate u_offset_c          *
  * 4. generate u_offset            */
-int spe_kmer_gen(const char *prefix, hash_idx *h_idx, debwt_t *db_idx)
+int pac_gen_skmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *db_idx)
 {
-    kmer_int_t kmerInt;
-    gzFile fp; kseq_t *fa_seq;
-    fp = xzopen(prefix, "r");
-    fa_seq = kseq_init(fp);
-    ref_offset_t chr_off, chr_len, seq_i; uint8_t pre_nt, next_nt;
-    kmer_num_t k_i, pre_k_i;
-    hash_int_t hashKey, pre_hashKey;
+    kmer_int_t kmerInt; debwt_count_t seq_i; uint8_t pre_nt, next_nt;
+    kmer_num_t k_i, pre_k_i; hash_int_t hashKey, pre_hashKey;
 
-    chr_off = 0;
-    while (kseq_read(fa_seq) >= 0) {
-        chr_len = fa_seq->seq.l;
-        seq_i = 0;
-        err_printf("[%s] Re-generating and sorting special kmer for %s ...\n",__func__, fa_seq->name.s);
-        pre_k_i = -1; pre_hashKey = 0;
-        if (get_first_kmer(fa_seq, &seq_i, h_idx->hp.k, &kmerInt, &next_nt)) {        // first kmer
-            k_i = hash_spe_check(h_idx, db_idx, seq_i+chr_off+1-h_idx->hp.k, kmerInt, nt_N, pre_hashKey, pre_k_i, &hashKey);
+    seq_i = 0;
+    pre_k_i = -1; pre_hashKey = 0;
+    if (debwt_pac_first_kmer(db_pac, l_pac, &seq_i, h_idx->hp, &kmerInt, &next_nt)) {        // first kmer
+        k_i = hash_spe_check(h_idx, db_idx, seq_i+1-h_idx->hp.k, kmerInt, nt_N, pre_hashKey, pre_k_i, &hashKey);
+        pre_k_i = k_i; pre_hashKey = hashKey;
+        while (debwt_pac_shift_kmer(db_pac, l_pac, &seq_i, h_idx->hp, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
+            k_i = hash_spe_check(h_idx, db_idx, seq_i+1-h_idx->hp.k, kmerInt, pre_nt, pre_hashKey, pre_k_i, &hashKey);
             pre_k_i = k_i; pre_hashKey = hashKey;
-            while (get_shift_kmer(fa_seq, &seq_i, h_idx->hp.k, h_idx->hp.k_m, &kmerInt, &pre_nt, &next_nt)) { // generate kmer based on last kmer
-                k_i = hash_spe_check(h_idx, db_idx, seq_i+chr_off+1-h_idx->hp.k, kmerInt, pre_nt, pre_hashKey, pre_k_i, &hashKey);
-                pre_k_i = k_i; pre_hashKey = hashKey;
-            }
+            if (seq_i % _COUNT_S == 0)
+                err_printf("[%s] Re-generating and sorting special kmer: %lld bp done.\n",__func__, (long long)seq_i);
         }
-        chr_off += chr_len;
     }
-
     sort_spe_kmer(h_idx);
     err_printf("[%s] Re-generating and sorting done!\n",__func__);
-
 #ifdef __DEBUG__
     debwt_count_t sk_ns;
     uint32_t i, j;
     for (i = 0; i < h_idx->hp.hash_size; ++i) {
         sk_ns = h_idx->skmer_c[i];
         for (j = 0; j < h_idx->skmer_num[i]; ++j) {
-            cons_kmer(h_idx->skmer_node[sk_ns+j], i, *h_idx); // output kmer
+            cons_kmer(h_idx->skmer_node[sk_ns+j], i, h_idx); // output kmer
         }
     }
 #endif
     err_printf("[%s] Total special kmer count: %lld\n",__func__, (long long)h_idx->skmer_tol_count);
-
-    kseq_destroy(fa_seq); err_gzclose(fp);
     return 0;
 }
 
