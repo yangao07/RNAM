@@ -189,13 +189,13 @@ int rest_index(int argc, char *argv[])
     hash_reset_idx_para(&h_idx);
     prefix = strdup(argv[optind]);
 
-    { // generate forward.pac
+    /*{ // generate forward.pac
         gzFile fp = xzopen(prefix, "r");
         fprintf(stderr, "[%s] Pack genome FASTA ... ", __func__);
         bns_fasta2bntseq(fp, prefix, 1);
         fprintf(stderr, "done!\n");
         err_gzclose(fp);
-    }
+    }*/
     { // generate de Bruijn graph and BWT
         gzFile fp = xzopen(prefix, "r");
         debwt_count_t l_pac;

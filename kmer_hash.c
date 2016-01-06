@@ -113,7 +113,7 @@ int debwt_pac_first_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t
         if (k_i == k) break;
     }
     *seq_i = i;
-    *next_nt = _debwt_get_pac(db_pac, i);
+    *next_nt = (i == l_pac) ? nt_N : _debwt_get_pac(db_pac, i);
     return (k_i == k);
 }
 
@@ -143,10 +143,10 @@ int debwt_pac_shift_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t
 
 int debwt_pac_first_kmer_hashKey(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t *seq_i, hash_para hp, hash_int_t *hashKey, uint8_t *next_hashKey_nt, uint8_t *next_nt)
 {
-    uint8_t k = hp.k, hash_k = hp.hash_k;
+    uint8_t k = hp.k, hash_k = hp.hash_k, nt;
     int hash_k_i = 0, k_i = 0; debwt_count_t i = *seq_i;
-    uint8_t nt;
     *hashKey=0;
+
     while (i < l_pac) {
         nt = _debwt_get_pac(db_pac, i); i++;
         if (nt != nt_N) {
@@ -162,7 +162,7 @@ int debwt_pac_first_kmer_hashKey(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt
     }
     *seq_i = i;
     *next_hashKey_nt = _debwt_get_pac(db_pac, i-k+hash_k);
-    *next_nt = _debwt_get_pac(db_pac, i);
+    *next_nt = (i == l_pac) ? nt_N : _debwt_get_pac(db_pac, i);
     return (k_i == k);
 }
 
@@ -679,9 +679,7 @@ int pac_gen_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx)
     err_printf("[%s] Total normal kmer real count: %lld\n",__func__, (long long)k_count);
     err_printf("[%s] Total unipath offset count: %lld\n",__func__, (long long)uo_count);
 
-    uint32_t max_remn_n = pow(4, h_idx->hp.remn_k);
     for (i = 1; i < h_idx->hp.hash_size+1; ++i) {
-        if (h_idx->skmer_c[i] > max_remn_n) h_idx->skmer_c[i] = max_remn_n;
         sk_count += h_idx->skmer_c[i];
         h_idx->skmer_c[i] = sk_count;
     }
