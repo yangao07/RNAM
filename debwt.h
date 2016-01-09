@@ -6,6 +6,7 @@
 #define debwt_int_t uint64_t
 #define _DEBWT_INT_SIZE  64
 #define debwt_hash_t uint32_t
+#define uni_sa_t uint32_t
 
 // default schema of bwt
 // [5 OCC][4 BWT-INT]                                [5 OCC][4 BWT-INT] [...][...] [5 OCC][last n BWT-INT(n<=4)]
@@ -22,11 +23,19 @@
 #define _BWT_INV_B 4  
 #define _BWT_INV_M 0xf   // 15
 
-#define _OCC_INV 64      //store C[5] for every occ_inv bwt_char; 64=16*4
-#define _OCC_INV_B 6
-#define _OCC_INV_M 0x3f  // 63
+//#define _OCC_INV 64      //store C[5] for every occ_inv bwt_char; 64=16*4
+//#define _OCC_INV_B 6
+//#define _OCC_INV_M 0x3f  // 63
 
-#define _BWT_OCC_B 3     // 9=2^3+1
+#define _OCC_INV 128     //store C[5] for every occ_inv bwt_char; 128=16*8
+#define _OCC_INV_B 7
+#define _OCC_INV_M 0x7f  // 127
+
+//#define _BWT_OCC_B 3     // 9=2^3+1
+//#define debwt_bwt_occ_a(i) (((i) << _BWT_OCC_B) + (i))
+#define _BWT_OCC_B       // 8+5=13 = 2^3+2^2+1
+#define debwt_bwt_occ_a(i) (((i)<<3) + ((i)<<2) + (i))
+
 #define _SA_INV 32
 #define _SA_INV_B 5
 #define _SA_INV_M 0x1f
@@ -52,17 +61,22 @@ typedef struct {
     debwt_int_t   bwt_unit;      // for push_bwt
     debwt_count_t bwt_i, bwt_k;  // index of bwt_str and bwt
     uint8_t bit_table16[65536];
-    //uint8_t bit_table32[536870912]; // pow(2,19)
 
-    debwt_count_t n_unipath;     // total count of unipath
-    debwt_count_t n_offset;      // total count of offsets
+    //XXX//debwt_count_t n_unipath;     // total count of unipath
+    //XXX//debwt_count_t n_offset;      // total count of offsets
+    uni_sa_t n_unipath, n_offset, n_s_sa;
+    debwt_count_t n_sa; 
 
-    debwt_count_t n_sa, n_s_sa;
-    debwt_count_t *sa_uid, *sa_u_off; 
-    debwt_count_t *s_sa_uid;     // normal SA and special SA for all the '#-bwt_char'
+    //XXX//debwt_count_t *sa_uid, *sa_u_off; 
+    uni_sa_t *sa_uid, *sa_u_off; 
+    //XXX//debwt_count_t *s_sa_uid;     // normal SA and special SA for all the '#-bwt_char'
+    uni_sa_t *s_sa_uid;
 
-    debwt_count_t *uni_offset_c; // cumulative number of offsets for each unipath
+    // uni_offset_c and uni_offset are used in [kmer_hash]
+    //XXX//debwt_count_t *uni_offset_c; // cumulative number of offsets for each unipath
+    uni_sa_t *uni_offset_c;
     ref_offset_t  *uni_offset;   // offsets of each unipath
+
     debwt_count_t C[_OCC_C];     // cumulative count of 'A/C/G/T/#'
                                  // after update: [0]: num of #
                                  //               [1]: num of #, A
@@ -82,8 +96,9 @@ typedef struct {
 
 
 int build_debwt(char *prefix, hash_idx *h_idx, debwt_t *de_idx, int rev);
-void debwt_free(debwt_t *de_idx);
+void debwt_index_free(debwt_t *de_idx);
 void push_debwt_bwt(uint8_t bwt_nt, debwt_t *db_idx);
-int pac_build_debwt(const char *prefix, debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *de_idx);
+int pac_build_debwt(const char *prefix, debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *db_idx);
+void debwt_index_init0(debwt_t *db);
 
 #endif

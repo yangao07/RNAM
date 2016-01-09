@@ -171,7 +171,7 @@ int rest_index(int argc, char *argv[])
 {
     char *prefix=0; int c, for_only=0;
 
-    hash_idx h_idx; debwt_t de_idx;
+    hash_idx h_idx; debwt_t db_idx;
 
     //hash_init_idx_para(&h_idx);
     hash_init_idx32_para(&h_idx);
@@ -201,7 +201,7 @@ int rest_index(int argc, char *argv[])
         debwt_count_t l_pac;
         debwt_pac_t *db_pac = debwt_gen_pac(fp, &l_pac, for_only); 
         err_gzclose(fp);
-        pac_build_debwt(prefix, db_pac, l_pac, &h_idx, &de_idx);
+        pac_build_debwt(prefix, db_pac, l_pac, &h_idx, &db_idx);
     }
     free(prefix);
     return 0;

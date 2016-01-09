@@ -248,6 +248,9 @@ void bns_destroy(bntseq_t *bns)
 #define _set_pac(pac, l, c) ((pac)[(l)>>2] |= (c)<<((~(l)&3)<<1))
 #define _get_pac(pac, l) ((pac)[(l)>>2]>>((~(l)&3)<<1)&3)
 
+/*
+ * return pac: forward_pac|N|reverse_pac
+ */
 debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, int for_only) 
 {
     debwt_pac_t *pac = 0; int64_t m_pac, l_pac;
@@ -272,9 +275,11 @@ debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, int for_only)
         }
     } kseq_destroy(seq);
     if (!for_only) { // gen reverse pac
-        m_pac = (l_pac * 2 + 1) / 2 * 2;
+        m_pac = (l_pac + 1) * 2; // for|N|rev: l_pac*2+1
         pac = (debwt_pac_t*)_err_realloc(pac, m_pac/2 * sizeof(debwt_pac_t));
         memset(pac + (l_pac+1)/2, 0, (m_pac - (l_pac + 1)/2*2)/2);
+        _debwt_set_pac(pac, l_pac, 4); // seperate-N
+        l_pac++;
         for (i = l_pac-1; i >= 0; --i, ++l_pac)
             _debwt_set_pac(pac, l_pac, re_nt[_debwt_get_pac(pac, i)]);
     }

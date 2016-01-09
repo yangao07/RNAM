@@ -39,7 +39,7 @@ typedef struct {
 #define _KMER_NODE_SIZE 32 
 //#define debwt_count_t uint32_t // for forward-only
 #define debwt_count_t uint64_t // for forward and reverse
-//#define ref_offset_t uint32_t // for forward-only
+#define f_ref_offset_t uint32_t // for forward-only
 #define ref_offset_t uint64_t // for forward and reverse
 #define skmer_node_t uint32_t
 
@@ -60,14 +60,14 @@ typedef struct {
     debwt_count_t uni_n, uni_m;
     debwt_count_t next_offset_c;
                  // same to kmer_num/skmer_num, size: uni_tol_count
-    debwt_count_t *uni_offset_n;
+    //debwt_count_t *uni_offset_n;
                  // smae to kmer_node, size: kmer_tol_count
     debwt_count_t *uni_id;       // UID of normal kmer
     debwt_count_t last_uid, cur_uid, next_uid;
                  // smae to skmer_node
-    ref_offset_t  *uni_offset;   // 1-base
-    debwt_count_t uni_tol_count; // uni_tol = skmer_tol / (k-1)
-    debwt_count_t off_tol_count;
+    //ref_offset_t  *uni_offset;   // 1-base
+    //debwt_count_t uni_tol_count; // uni_tol = skmer_tol / (k-1)
+    //debwt_count_t off_tol_count;
 
     /* hash index for special kmer */
     debwt_count_t *skmer_c;      
