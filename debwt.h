@@ -6,7 +6,6 @@
 #define debwt_int_t uint64_t
 #define _DEBWT_INT_SIZE  64
 #define debwt_hash_t uint32_t
-#define uni_sa_t uint32_t
 
 // default schema of bwt
 // [5 OCC][4 BWT-INT]                                [5 OCC][4 BWT-INT] [...][...] [5 OCC][last n BWT-INT(n<=4)]
@@ -42,6 +41,9 @@
 
 //#define _BWT_HASH_K 13
 
+#define _debwt_set_strand(uni_pos_strand, i, s) ((uni_pos_strand)[(i)>>3] |= (s) << (~(i)&7))
+#define _debwt_get_strand(uni_pos_strand, i) (((uni_pos_strand)[(i)>>3]>>(~(i)&7))&1) // 0:+, 1:-
+
 typedef struct {
     uint8_t occ_c;              
     uint8_t bwt_nt_k, bwt_nt_b, bwt_nt_m; 
@@ -64,7 +66,7 @@ typedef struct {
 
     //XXX//debwt_count_t n_unipath;     // total count of unipath
     //XXX//debwt_count_t n_offset;      // total count of offsets
-    uni_sa_t n_unipath, n_offset, n_s_sa;
+    uni_sa_t n_unipath, n_uni_pos, n_s_sa;
     debwt_count_t n_sa; 
 
     //XXX//debwt_count_t *sa_uid, *sa_u_off; 
@@ -74,8 +76,10 @@ typedef struct {
 
     // uni_offset_c and uni_offset are used in [kmer_hash]
     //XXX//debwt_count_t *uni_offset_c; // cumulative number of offsets for each unipath
-    uni_sa_t *uni_offset_c;
-    ref_offset_t  *uni_offset;   // offsets of each unipath
+    uni_sa_t *uni_pos_c;
+    //ref_offset_t  *uni_offset;   // offsets of each unipath
+    f_ref_offset_t *uni_pos;
+    uint8_t *uni_pos_strand;       // 0: forward, 1: reverse
 
     debwt_count_t C[_OCC_C];     // cumulative count of 'A/C/G/T/#'
                                  // after update: [0]: num of #
@@ -98,7 +102,7 @@ typedef struct {
 int build_debwt(char *prefix, hash_idx *h_idx, debwt_t *de_idx, int rev);
 void debwt_index_free(debwt_t *de_idx);
 void push_debwt_bwt(uint8_t bwt_nt, debwt_t *db_idx);
-int pac_build_debwt(const char *prefix, debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *db_idx);
+int pac_build_debwt(const char *prefix, debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t f_pac, hash_idx *h_idx, debwt_t *db_idx);
 void debwt_index_init0(debwt_t *db);
 
 #endif

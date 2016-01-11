@@ -61,7 +61,7 @@ extern "C" {
 // use 4-bit to store A/C/G/T/N
 #define _debwt_set_pac(pac, l, c) ((pac)[(l)>>1] |= (c)<<((~(l)&1)<<2))
 #define _debwt_get_pac(pac, l) ((pac)[(l)>>1]>>((~(l)&1)<<2)&7)
-    debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, int for_only);
+    debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, debwt_count_t *fl, int for_only);
 
 #ifdef __cplusplus
 }

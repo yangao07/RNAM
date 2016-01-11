@@ -251,7 +251,7 @@ void bns_destroy(bntseq_t *bns)
 /*
  * return pac: forward_pac|N|reverse_pac
  */
-debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, int for_only) 
+debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, debwt_count_t *fl, int for_only) 
 {
     debwt_pac_t *pac = 0; int64_t m_pac, l_pac;
     kseq_t *seq = kseq_init(fp_fa);
@@ -274,13 +274,14 @@ debwt_pac_t *debwt_gen_pac(gzFile fp_fa, debwt_count_t *l, int for_only)
             l_pac++;
         }
     } kseq_destroy(seq);
+    *fl = l_pac;
     if (!for_only) { // gen reverse pac
         m_pac = (l_pac + 1) * 2; // for|N|rev: l_pac*2+1
         pac = (debwt_pac_t*)_err_realloc(pac, m_pac/2 * sizeof(debwt_pac_t));
         memset(pac + (l_pac+1)/2, 0, (m_pac - (l_pac + 1)/2*2)/2);
         _debwt_set_pac(pac, l_pac, 4); // seperate-N
         l_pac++;
-        for (i = l_pac-1; i >= 0; --i, ++l_pac)
+        for (i = l_pac-2; i >= 0; --i, ++l_pac)
             _debwt_set_pac(pac, l_pac, re_nt[_debwt_get_pac(pac, i)]);
     }
     *l = l_pac;

@@ -198,10 +198,10 @@ int rest_index(int argc, char *argv[])
     }*/
     { // generate de Bruijn graph and BWT
         gzFile fp = xzopen(prefix, "r");
-        debwt_count_t l_pac;
-        debwt_pac_t *db_pac = debwt_gen_pac(fp, &l_pac, for_only); 
+        debwt_count_t l_pac, f_pac;
+        debwt_pac_t *db_pac = debwt_gen_pac(fp, &l_pac, &f_pac, for_only); 
         err_gzclose(fp);
-        pac_build_debwt(prefix, db_pac, l_pac, &h_idx, &db_idx);
+        pac_build_debwt(prefix, db_pac, l_pac, f_pac, &h_idx, &db_idx);
     }
     free(prefix);
     return 0;

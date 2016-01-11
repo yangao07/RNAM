@@ -19,7 +19,7 @@ int get_hash_nt(uint8_t *hash_nt, int hashKey, uint8_t hash_k);
 
 int pac_count_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx);
 int pac_gen_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *db_idx);
-int pac_gen_skmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *db_idx);
+int pac_gen_skmer(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t f_pac, hash_idx *h_idx, debwt_t *db_idx);
 
 int kmer_merge(hash_idx *h_idx, debwt_t *de_idx);
 
