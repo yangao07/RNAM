@@ -8,7 +8,6 @@
 #include "debwt.h"
 #include "bntseq.h"
 #include "utils.h"
-//#include "error.h"
 
 int rest_index_usage(void)
 {

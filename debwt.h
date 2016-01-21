@@ -32,7 +32,7 @@
 
 //#define _BWT_OCC_B 3     // 9=2^3+1
 //#define debwt_bwt_occ_a(i) (((i) << _BWT_OCC_B) + (i))
-#define _BWT_OCC_B       // 8+5=13 = 2^3+2^2+1
+//#define _BWT_OCC_B       // 8+5=13 = 2^3+2^2+1
 #define debwt_bwt_occ_a(i) (((i)<<3) + ((i)<<2) + (i))
 
 #define _SA_INV 32
@@ -62,7 +62,8 @@ typedef struct {
     debwt_int_t   *bwt;          // bwt_str & OCC
     debwt_int_t   bwt_unit;      // for push_bwt
     debwt_count_t bwt_i, bwt_k;  // index of bwt_str and bwt
-    uint8_t bit_table16[65536];
+    uint8_t bit_table16[65536];  // number of '1'
+    uint64_t cnt_table8[256];     // number of 'A/C/G/T/N'
 
     //XXX//debwt_count_t n_unipath;     // total count of unipath
     //XXX//debwt_count_t n_offset;      // total count of offsets
@@ -94,7 +95,7 @@ typedef struct {
 } debwt_t;
 
 typedef struct {
-    debwt_count_t u, l;
+    debwt_count_t k, l;
 } debwt_intv_t;
 
 
@@ -104,5 +105,10 @@ void debwt_index_free(debwt_t *de_idx);
 void push_debwt_bwt(uint8_t bwt_nt, debwt_t *db_idx);
 int pac_build_debwt(const char *prefix, debwt_pac_t *db_pac, debwt_count_t l_pac, debwt_count_t f_pac, hash_idx *h_idx, debwt_t *db_idx);
 void debwt_index_init0(debwt_t *db);
+
+debwt_t *debwt_restore_index(const char *prefix);
+debwt_count_t debwt_exact_match(const debwt_t *db, int qlen, const uint8_t *query, debwt_count_t *sa_k, debwt_count_t *sa_l);
+debwt_count_t debwt_exact_match_alt(const debwt_t *db, int qlen, const uint8_t *query, debwt_count_t *sa_k, debwt_count_t *sa_l);
+uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, f_ref_offset_t *off);
 
 #endif

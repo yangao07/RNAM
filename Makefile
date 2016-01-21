@@ -1,14 +1,17 @@
 CC      = gcc
-CFLAGS  = -O3 -c -Wall 
+CFLAGS  = -c -Wall -O3 -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function
 DFLAGS  = -g -Wall
 LDFLAGS = -lz -lm -lpthread
 
-SOURCE  = main.c rest_index.c rest_aln.c debwt.c bntseq.c kmer_hash.c utils.c kstring.c
+BIN_DIR =
+SRC_DIR = 
+#SOURCE  = main.c rest_index.c rest_aln.c debwt.c bntseq.c kmer_hash.c utils.c kstring.c
+SOURCE  = $(wildcard $(SRC_DIR)*.c)
 OBJS    = $(SOURCE:.c=.o)
 
-PROG    = rest
-DEBUG   = gdb_rest
-LIT     = lit_rest
+PROG    = $(BIN_DIR)rest
+DEBUG   = $(BIN_DIR)gdb_rest
+LIT     = $(BIN_DIR)lit_rest
 DMARCRO = -D __DEBUG__
 LMARCRO = -D __LIT__
 
