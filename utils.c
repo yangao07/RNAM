@@ -39,6 +39,7 @@
 #endif
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <time.h>
 #include "utils.h"
 
 #include "ksort.h"
@@ -328,4 +329,13 @@ double realtime()
 	struct timezone tzp;
 	gettimeofday(&tp, &tzp);
 	return tp.tv_sec + tp.tv_usec * 1e-6;
+}
+
+void get_cur_time(const char *prefix)
+{
+    time_t now = time(0);
+    struct tm ts; char buf[1024];
+    ts = *localtime(&now);
+    err_printf("[%s] ", prefix);
+    strftime(buf, sizeof(buf), "%Y-%m-%d-%s", &ts);
 }

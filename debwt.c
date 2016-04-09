@@ -128,7 +128,7 @@ void print_debwt(debwt_t *db_idx)
 // XXX (sa_i)>>_OCC_INV_B
 //#define debwt_bwt_occ_a(i) (((i) << _BWT_OCC_B) + (i))
 #define debwt_bwt(db, sa_i) ((db)->bwt[_OCC_C + debwt_bwt_occ_a((sa_i)>>_OCC_INV_B) + (((sa_i)&(_OCC_INV_M))>>_BWT_INV_B)])
-#define debwt_get_bwt_nt(db, sa_i) ((debwt_bwt(db, sa_i)>>((~(sa_i)&_BWT_INV_M)<<_BWT_NT_B))&_BWT_NT_M)
+#define debwt_bwt_nt(db, sa_i) ((debwt_bwt(db, sa_i)>>((~(sa_i)&_BWT_INV_M)<<_BWT_NT_B))&_BWT_NT_M)
 #define debwt_occ_a(db, sa_i) ((db)->bwt + debwt_bwt_occ_a((sa_i)>>_OCC_INV_B))
 #define __occ_cnt4(table, b) (table[(b)&0x1111] + table[(b)>>16&0x1111] + table[(b)>>32&0x1111] + table[(b)>>48&0x1111])
 #define __occ_cnt2(table, b) (table[(b)&0x11111111] + table[(b)>>32&0x11111111])
@@ -182,12 +182,14 @@ void debwt_2occ(const debwt_t *db, debwt_count_t k, debwt_count_t l, uint8_t nt,
 }
 
 
-//#define __occ_aux4(debwt, b)                                           \
-//   ((debwt)->cnt_table8[(b)&0xff] + (debwt)->cnt_table8[(b)>>8&0xff]      \
-//  + (debwt)->cnt_table8[(b)>>16&0xff] + (debwt)->cnt_table8[(b)>>24&0xff]  \
-//  + (debwt)->cnt_table8[(b)>>32&0xff] + (debwt)->cnt_table8[(b)>>40&0xff]  \
-//  + (debwt)->cnt_table8[(b)>>48&0xff] + (debwt)->cnt_table8[(b)>>56])
-//#define __occ_aux1(debwt, b, c) ((__occ_aux4(debwt, b) >> ((c)<<3)) & 0x1f )
+/*
+#define __occ_aux4(debwt, b)                                           \
+   ((debwt)->cnt_table8[(b)&0xff] + (debwt)->cnt_table8[(b)>>8&0xff]      \
+  + (debwt)->cnt_table8[(b)>>16&0xff] + (debwt)->cnt_table8[(b)>>24&0xff]  \
+  + (debwt)->cnt_table8[(b)>>32&0xff] + (debwt)->cnt_table8[(b)>>40&0xff]  \
+  + (debwt)->cnt_table8[(b)>>48&0xff] + (debwt)->cnt_table8[(b)>>56])
+#define __occ_aux1(debwt, b, c) ((__occ_aux4(debwt, b) >> ((c)<<3)) & 0x1f )
+*/
 
 #define debwt_set_intv(d, nt, k, l) {(k) = (d)->C[(nt)], (l) = (d)->C[(nt)+1]-1;}
 
@@ -281,7 +283,7 @@ void debwt_cal_sa(debwt_t *db_idx)
     for (i = 0; i < db_idx->n_unipath; ++i) {
         sa_uid_i = i/*0-base*/, sa_uid = i/*0-base*/;
         off = 0; off_n = 0;
-        while ((bwt_nt = debwt_get_bwt_nt(db_idx, sa_uid_i)) < nt_N) {
+        while ((bwt_nt = debwt_bwt_nt(db_idx, sa_uid_i)) < nt_N) {
             if ((sa_uid_i+1) % _SA_INV == 0) {
                 db_idx->sa_uid[((sa_uid_i+1)>>_SA_INV_B)-1] = sa_uid;
                 db_idx->sa_u_off[((sa_uid_i+1)>>_SA_INV_B)-1] = off;
@@ -310,12 +312,12 @@ void debwt_cal_sa(debwt_t *db_idx)
 uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, f_ref_offset_t *off)
 {
     *off = 0;
-    uint8_t nt = debwt_get_bwt_nt(db, sa_uid_i);
+    uint8_t nt = debwt_bwt_nt(db, sa_uid_i);
     while (nt != nt_N && ((sa_uid_i+1) & _SA_INV_M)) {
         (*off)++;
         sa_uid_i = debwt_pre_sa_i(db, sa_uid_i, nt);
 
-        nt = debwt_get_bwt_nt(db, sa_uid_i);
+        nt = debwt_bwt_nt(db, sa_uid_i);
     }
     if (nt == nt_N) {
         return db->s_sa_uid[debwt_occ(db, sa_uid_i, nt_N)];
@@ -353,7 +355,7 @@ void debwt_cal_hash(debwt_t *db_idx)
     db_idx->bwt_hash_il = (debwt_count_t*)_err_calloc(db_idx->bwt_hash_size, sizeof(debwt_count_t));
 
     int i; uint8_t *hash_query = (uint8_t*)_err_malloc(_BWT_HASH_K * sizeof(uint8_t));
-    debwt_count_t sa_k, sa_l;
+    debwt_count_t sa_k=0, sa_l;
 
     for (i = 0; i < db_idx->bwt_hash_size; ++i) {
         get_hash_nt(hash_query, i, _BWT_HASH_K);

@@ -63,7 +63,7 @@ typedef struct {
     debwt_int_t   bwt_unit;      // for push_bwt
     debwt_count_t bwt_i, bwt_k;  // index of bwt_str and bwt
     uint8_t bit_table16[65536];  // number of '1'
-    uint64_t cnt_table8[256];     // number of 'A/C/G/T/N'
+    uint64_t cnt_table8[256];     // number of 'A/C/G/T/#'
 
     //XXX//debwt_count_t n_unipath;     // total count of unipath
     //XXX//debwt_count_t n_offset;      // total count of offsets

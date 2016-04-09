@@ -195,7 +195,7 @@ bntseq_t *bns_restore(const char *prefix)
 	char ann_filename[1024], amb_filename[1024], pac_filename[1024], alt_filename[1024];
 	FILE *fp;
 	bntseq_t *bns;
-	strcat(strcpy(ann_filename, prefix), "rest.ann");
+	strcat(strcpy(ann_filename, prefix), ".rest.ann");
 	strcat(strcpy(amb_filename, prefix), ".rest.amb");
 	strcat(strcpy(pac_filename, prefix), ".rest.pac");
 	bns = bns_restore_core(ann_filename, amb_filename, pac_filename);

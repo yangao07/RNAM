@@ -164,7 +164,7 @@ typedef struct __kstring_t {
 		if (!ks) return;												\
 		free(ks->name.s); free(ks->comment.s); free(ks->seq.s);	free(ks->qual.s); \
 		ks_destroy(ks->f);												\
-		free(ks);														\
+        free(ks);                                                       \
 	}
 
 /* Return value:

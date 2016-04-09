@@ -21,15 +21,23 @@ rest_aln_para *rest_init_ap(void)
     return ap;
 }
 
-void aux_free(rest_aux_t *aux, int t)
+void aux_free(rest_aux_t *aux)
 {
     int i;
-    for (i = 0; i < t; ++i) {
-    }
     free(aux->ap);
     debwt_index_free(aux->db); free(aux->db);
     free(aux->pac); bns_destroy(aux->bns);
-    kseq_destroy(aux->w_seqs);
+
+    for (i = 0; i < CHUNK_READ_N; ++i) {
+        if (aux->w_seqs+i != NULL) {
+            free((aux->w_seqs+i)->name.s);
+            free((aux->w_seqs+i)->comment.s);
+            free((aux->w_seqs+i)->seq.s);
+            free((aux->w_seqs+i)->qual.s);
+        }
+    }
+    ks_destroy(aux->w_seqs->f);
+    free(aux->w_seqs);
     free(aux);
 }
 
@@ -41,6 +49,7 @@ int rest_read_seq(kseq_t *read_seq, int chunk_read_n)
     }
     return n;
 }
+
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
 
@@ -157,10 +166,8 @@ int rest_aln_core(const char *ref_fn, const char *read_fn, rest_aln_para *rest_a
         }
         pthread_rwlock_destroy(&RWLOCK);
     }
-    aux_free(aux, rest_ap->n_thread);
-    for(i = 0; i < CHUNK_READ_N; ++i) {
-        free((read_seqs+i)->name.s); free((read_seqs+i)->comment.s); free((read_seqs+i)->seq.s); free((read_seqs+i)->qual.s);
-    } free(read_seqs); ks_destroy(fs); err_gzclose(readfp);
+    aux_free(aux);
+    err_gzclose(readfp);
     return 0;
 }
 
@@ -172,6 +179,7 @@ int rest_aln(int argc, char *argv[])
     while ((c = getopt(argc, argv, "t:l:")) >= 0) {
         switch (c)
         {
+            case 't': rest_ap->n_thread = atoi(optarg); break;
             case 'l': rest_ap->seed_len = atoi(optarg); break;
             default: return rest_aln_usage();
         }
