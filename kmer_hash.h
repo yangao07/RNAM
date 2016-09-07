@@ -16,6 +16,7 @@ void debwt_kmer_hash_free0(hash_idx *h_idx);
 void debwt_kmer_hash_free1(hash_idx *h_idx);
 
 int get_hash_nt(uint8_t *hash_nt, int hashKey, uint8_t hash_k);
+int get_hash_value(uint8_t *hash_nt, uint8_t hash_k);
 
 int pac_count_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx);
 int pac_gen_kmer(debwt_pac_t *db_pac, debwt_count_t l_pac, hash_idx *h_idx, debwt_t *db_idx);

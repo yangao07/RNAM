@@ -53,11 +53,13 @@ extern "C" {
 	int bns_pos2rid(const bntseq_t *bns, int64_t pos_f);
 	int bns_cnt_ambi(const bntseq_t *bns, int64_t pos_f, int len, int *ref_id);
 	uint8_t *bns_get_seq(int64_t l_pac, const uint8_t *pac, int64_t beg, int64_t end, int64_t *len);
+    uint8_t *_bns_get_seq(int64_t l_pac, const uint8_t *pac, int64_t beg, int64_t len, int is_rev);
 	uint8_t *bns_fetch_seq(const bntseq_t *bns, const uint8_t *pac, int64_t *beg, int64_t mid, int64_t *end, int *rid);
 	int bns_intv2rid(const bntseq_t *bns, int64_t rb, int64_t re);
     void pac2fa_core(const bntseq_t *bns, const uint8_t *pac, const int32_t seq_id, const int64_t start/*0-base*/, int32_t *len, uint8_t *seq);
     void pac2fa(const bntseq_t *bns, const uint8_t *pac, const int32_t seq_id, const int64_t start/*0-base*/, int32_t *len, char *seq);
-
+    void _pac2fa_core(const bntseq_t *bns, const uint8_t *pac, const int64_t pac_coor/*0-base*/, int32_t *len, uint8_t *seq);
+    void _pac2fa(const bntseq_t *bns, const uint8_t *pac, const int64_t pac_coor/*0-base*/, int32_t *len, char *seq);
 // use 4-bit to store A/C/G/T/N
 #define _debwt_set_pac(pac, l, c) ((pac)[(l)>>1] |= (c)<<((~(l)&1)<<2))
 #define _debwt_get_pac(pac, l) ((pac)[(l)>>1]>>((~(l)&1)<<2)&7)

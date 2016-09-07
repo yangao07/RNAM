@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <pthread.h>
 #include "rest_aln.h"
+#include "debwt_aln.h"
 #include "debwt.h"
 #include "utils.h"
 #include "kseq.h"
@@ -15,9 +16,12 @@ int rest_aln_usage(void)
 
 rest_aln_para *rest_init_ap(void)
 {
+    // XXX init para
     rest_aln_para *ap = (rest_aln_para*)calloc(1, sizeof(rest_aln_para));
     ap->n_thread = 1;
     ap->seed_len = REST_SEED_LEN;
+    ap->debwt_hash_len = _BWT_HASH_K;
+    ap->debwt_uni_occ_thd = REST_UNI_OCC_THD;
     return ap;
 }
 
@@ -53,12 +57,35 @@ int rest_read_seq(kseq_t *read_seq, int chunk_read_n)
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
 
+seed_loc_t *init_seed_loc()
+{
+    seed_loc_t *loc = (seed_loc_t*)_err_malloc(sizeof(seed_loc_t));
+    loc->n = 0, loc->m = 100;
+    loc->loc = (loc_t*)_err_malloc(loc->m * sizeof(loc_t));
+    int i; 
+    for (i = 0; i < loc->m; ++i) {
+        loc->loc[i].uid = 0;
+        loc->loc[i].uni_off = 0, loc->loc[i].len1 = 0;
+        loc->loc[i].read_off = 0, loc->loc[i].len2 = 0;
+    }
+    return loc;
+}
+
+void free_seed_loc(seed_loc_t *loc) { free(loc->loc); free(loc); }
+
+/*void reall_seed_loc(seed_loc_t *loc)
+{
+    ;
+}*/
+
+
 int rest_main_aln(rest_aux_t *aux)
 {
     debwt_t *db = aux->db; bntseq_t *bns = aux->bns; uint8_t *pac = aux->pac;
     kseq_t *w_seqs = aux->w_seqs; int n_seqs = aux->n_seqs; 
+    seed_loc_t *seed_loc = init_seed_loc();
     rest_aln_para *ap = aux->ap;
-    int i_seq=0, i;
+    int i_seq=0; uint64_t i;
     while (i_seq < n_seqs) {
         if (i_seq == n_seqs) break;
         kseq_t *seqs = w_seqs+i_seq;
@@ -67,21 +94,24 @@ int rest_main_aln(rest_aux_t *aux)
         for (i = 0; i < seqs->seq.l; ++i) bseq[i] = nst_nt4_table[(int)(seqs->seq.s[i])];
 
         // seeding and locating
-        // stitching
-        // local assembly
-
+        debwt_gen_loc_clu(bseq, seqs->seq.l, db, bns, pac, ap, seed_loc);
+        // debug
+        //while (1);
+        
 
         debwt_count_t ok, ol, l;
         uint32_t uid, off, m;
         l = debwt_exact_match(db, seqs->seq.l, bseq, &ok, &ol);
         for (i = 0; i < l; ++i) {
             uid = debwt_sa(db, ok+i, &off);
+            stdout_printf("UID: #%d\n", uid);
             for (m = db->uni_pos_c[uid]; m < db->uni_pos_c[uid+1]; ++m)
                 stdout_printf("%c%d\t%d\n", "+-"[_debwt_get_strand(db->uni_pos_strand, m)], (int)db->uni_pos[m], off);
         }
         free(bseq);
         i_seq++;
     }
+    free_seed_loc(seed_loc);
     return 0;
 }
 
@@ -100,7 +130,7 @@ static void *rest_thread_main_aln(void *a)
         kseq_t *seqs = w_seqs+i;
         stdout_printf("%s\n%s\n", seqs->name.s, seqs->seq.s);
         uint8_t *bseq = (uint8_t*)_err_malloc(seqs->seq.l * sizeof(uint8_t));
-        int j;
+        uint64_t j;
         for (j = 0; j < seqs->seq.l; ++j) bseq[j] = nst_nt4_table[(int)(seqs->seq.s[j])];
         debwt_count_t ok, ol, l;
         uint32_t uid, off, m, n;

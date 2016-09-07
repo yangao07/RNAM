@@ -9,12 +9,6 @@
 #include "kstring.h"
 #include "utils.h"
 
-#ifdef __LIT__
-#define _BWT_HASH_K 2
-#else
-#define _BWT_HASH_K 13
-#endif
-
 void debwt_index_init(debwt_t *db, hash_idx *h)
 {
     // offset 
@@ -22,7 +16,7 @@ void debwt_index_init(debwt_t *db, hash_idx *h)
     //db->n_uni_pos = h->off_tol_count;
 
     db->uni_pos_c = (uni_sa_t*)_err_malloc((db->n_unipath+1) * sizeof(uni_sa_t));
-    db->uni_pos = (f_ref_offset_t*)_err_malloc(db->n_uni_pos * sizeof(f_ref_offset_t));
+    db->uni_pos = (ref_off_t*)_err_malloc(db->n_uni_pos * sizeof(ref_off_t));
     db->uni_pos_strand = (uint8_t*)_err_calloc((db->n_uni_pos+7)>>3, sizeof(uint8_t));
 
     // init debwt_bwt
@@ -43,6 +37,7 @@ void debwt_index_init(debwt_t *db, hash_idx *h)
     db->sa_uid = (uni_sa_t*)_err_calloc(db->n_sa, sizeof(uni_sa_t));
     db->sa_u_off = (uni_sa_t*)_err_calloc(db->n_sa, sizeof(uni_sa_t));
     db->s_sa_uid = (uni_sa_t*)_err_calloc(db->n_s_sa, sizeof(uni_sa_t));
+    db->uni_len = (ref_off_t*)_err_calloc(db->n_unipath, sizeof(ref_off_t));
 }
 
 void debwt_index_init0(debwt_t *db)
@@ -52,7 +47,7 @@ void debwt_index_init0(debwt_t *db)
     //db->n_uni_pos = h->off_tol_count;
 
     db->uni_pos_c = (uni_sa_t*)_err_calloc((db->n_unipath+1), sizeof(uni_sa_t));
-    db->uni_pos = (f_ref_offset_t*)_err_malloc(db->n_uni_pos * sizeof(f_ref_offset_t));
+    db->uni_pos = (ref_off_t*)_err_malloc(db->n_uni_pos * sizeof(ref_off_t));
     db->uni_pos_strand = (uint8_t*)_err_calloc((db->n_uni_pos+7)>>3, sizeof(uint8_t));
 }
 
@@ -80,13 +75,14 @@ void debwt_index_init2(debwt_t *db)
     db->sa_uid = (uni_sa_t*)_err_calloc(db->n_sa, sizeof(uni_sa_t));
     db->sa_u_off = (uni_sa_t*)_err_calloc(db->n_sa, sizeof(uni_sa_t));
     db->s_sa_uid = (uni_sa_t*)_err_calloc(db->n_s_sa, sizeof(uni_sa_t));
+    db->uni_len = (ref_off_t*)_err_calloc(db->n_unipath, sizeof(ref_off_t));
 }
 
 void debwt_index_free(debwt_t *db_idx)
 {
     free(db_idx->bwt);
 
-    free(db_idx->sa_uid); free(db_idx->sa_u_off); free(db_idx->s_sa_uid);
+    free(db_idx->sa_uid); free(db_idx->sa_u_off); free(db_idx->s_sa_uid); free(db_idx->uni_len);
 
     free(db_idx->uni_pos_c); free(db_idx->uni_pos); free(db_idx->uni_pos_strand);
 
@@ -96,7 +92,7 @@ void debwt_index_free(debwt_t *db_idx)
 // argv:
 // sa_uid_i: 0-base sa index
 // off: 0-base offset from start of the unipath
-uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, f_ref_offset_t *off);
+uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, ref_off_t *off);
 void print_debwt(debwt_t *db_idx)
 {
     debwt_count_t i; uint32_t j;
@@ -254,7 +250,7 @@ void debwt_gen_cnt_table8(debwt_t *db_idx)
     int i, j;
     for (i = 0; i != 256; ++i) {
         uint64_t x = 0;
-        for (j = 0; j != 5; ++j)
+        for (j = 0; j != _OCC_C; ++j)
             x |= (((i&7) == j) + ((i>>4&7)==j)) << (j<<3);
         db_idx->cnt_table8[i] = x;
     }
@@ -301,6 +297,7 @@ void debwt_cal_sa(debwt_t *db_idx)
         }
         // bwt_nt == nt_N, sa_uid_i
         db_idx->s_sa_uid[debwt_occ(db_idx, sa_uid_i, nt_N)] = sa_uid;
+        db_idx->uni_len[sa_uid] = off;
         // reset all the sa_u_off: p -> P-p
         for (j = 0; j < off_n; ++j) 
             db_idx->sa_u_off[off_a[j]] = off-db_idx->sa_u_off[off_a[j]];
@@ -309,7 +306,7 @@ void debwt_cal_sa(debwt_t *db_idx)
     err_printf("[%s] Calculating SA done!\n", __func__);
 }
 
-uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, f_ref_offset_t *off)
+uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, ref_off_t *off)
 {
     *off = 0;
     uint8_t nt = debwt_bwt_nt(db, sa_uid_i);
@@ -376,7 +373,7 @@ void debwt_dump(const char *prefix, debwt_t *db)
     FILE *fp = xopen(fn, "wb");
     err_fwrite(&db->bwt_l, sizeof(debwt_count_t), 1, fp);
     err_fwrite(&db->bwt_size, sizeof(debwt_count_t), 1, fp);
-    err_fwrite(db->C, sizeof(debwt_count_t), 5, fp);
+    err_fwrite(db->C, sizeof(debwt_count_t), _OCC_C, fp);
     err_fwrite(db->bwt, sizeof(debwt_int_t), db->bwt_size, fp);
     err_fflush(fp);
     err_fclose(fp);
@@ -393,9 +390,10 @@ void debwt_dump(const char *prefix, debwt_t *db)
     err_fwrite(db->sa_uid, sizeof(uni_sa_t), db->n_sa, fp);
     err_fwrite(db->sa_u_off, sizeof(uni_sa_t), db->n_sa, fp);
     err_fwrite(db->s_sa_uid, sizeof(uni_sa_t), db->n_s_sa, fp);
+    err_fwrite(db->uni_len, sizeof(ref_off_t), db->n_unipath, fp);
 
     err_fwrite(db->uni_pos_c+1, sizeof(uni_sa_t), db->n_unipath, fp);
-    err_fwrite(db->uni_pos, sizeof(f_ref_offset_t), db->n_uni_pos, fp);
+    err_fwrite(db->uni_pos, sizeof(ref_off_t), db->n_uni_pos, fp);
     err_fwrite(db->uni_pos_strand, sizeof(uint8_t), (db->n_uni_pos+7)>>3, fp);
     err_fflush(fp);
     err_fclose(fp);
@@ -437,7 +435,7 @@ debwt_t *debwt_restore_index(const char *prefix)
     db = (debwt_t*)_err_calloc(1, sizeof(debwt_t));
     err_fread_noeof(&db->bwt_l, sizeof(debwt_count_t), 1, fp);
     err_fread_noeof(&db->bwt_size, sizeof(debwt_count_t), 1, fp);
-    err_fread_noeof(db->C, sizeof(debwt_count_t), 5, fp);
+    err_fread_noeof(db->C, sizeof(debwt_count_t), _OCC_C, fp);
     db->bwt = (debwt_int_t*)_err_calloc(db->bwt_size, sizeof(debwt_int_t));
     fread_fix(fp, db->bwt_size * sizeof(debwt_int_t), db->bwt);
     err_fclose(fp); 
@@ -459,11 +457,13 @@ debwt_t *debwt_restore_index(const char *prefix)
     fread_fix(fp, db->n_sa * sizeof(uni_sa_t), db->sa_u_off);
     db->s_sa_uid = (uni_sa_t*)_err_calloc(db->n_s_sa, sizeof(uni_sa_t));
     fread_fix(fp, db->n_s_sa * sizeof(uni_sa_t), db->s_sa_uid);
+    db->uni_len = (uni_sa_t*)_err_calloc(db->n_unipath, sizeof(uni_sa_t));
+    fread_fix(fp, db->n_unipath * sizeof(ref_off_t), db->uni_len);
 
     db->uni_pos_c = (uni_sa_t*)_err_calloc(db->n_unipath+1, sizeof(uni_sa_t));
     fread_fix(fp, db->n_unipath * sizeof(uni_sa_t), db->uni_pos_c+1);
-    db->uni_pos = (f_ref_offset_t*)_err_calloc(db->n_uni_pos, sizeof(f_ref_offset_t));
-    fread_fix(fp, db->n_uni_pos * sizeof(f_ref_offset_t), db->uni_pos);
+    db->uni_pos = (ref_off_t*)_err_calloc(db->n_uni_pos, sizeof(ref_off_t));
+    fread_fix(fp, db->n_uni_pos * sizeof(ref_off_t), db->uni_pos);
     db->uni_pos_strand = (uint8_t*)_err_calloc((db->n_uni_pos+7)>>3, sizeof(uint8_t));
     fread_fix(fp, (db->n_uni_pos+7)>>3 * sizeof(uint8_t), db->uni_pos_strand);
     err_fclose(fp); 

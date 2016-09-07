@@ -41,8 +41,8 @@ typedef struct {
 
 //#define debwt_count_t uint32_t // for forward-only
 #define debwt_count_t uint64_t // for forward and reverse
-#define f_ref_offset_t uint32_t // for forward-only
-//#define ref_offset_t uint64_t // for forward and reverse
+#define ref_off_t uint32_t // for forward-only, < 4G
+//#define ref_off_t uint64_t // for forward and reverse, > 4G
 
 #ifdef __LARGE_MEM__
 #define uni_sa_t uint64_t
@@ -77,7 +77,7 @@ typedef struct {
     uni_sa_t *uni_id;
     uni_sa_t last_uid, cur_uid, next_uid;
                  // smae to skmer_node
-    //ref_offset_t  *uni_offset;   // 1-base
+    //ref_off_t  *uni_offset;   // 1-base
     //debwt_count_t uni_tol_count; // uni_tol = skmer_tol / (k-1)
     //debwt_count_t off_tol_count;
 

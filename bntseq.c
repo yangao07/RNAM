@@ -482,6 +482,23 @@ uint8_t *bns_get_seq(int64_t l_pac, const uint8_t *pac, int64_t beg, int64_t end
 	return seq;
 }
 
+// beg: the coor of plus-strand
+uint8_t *_bns_get_seq(int64_t l_pac, const uint8_t *pac, int64_t beg, int64_t len, int is_rev)
+{
+	uint8_t *seq = 0;
+    int64_t k, l = 0, end = beg + len - 1;
+    if (end >= l_pac) err_printf("[_bns_get_seq] Error: wrong \'beg\' and \'len\'.\n");
+    seq = (uint8_t*)malloc(len);
+    if (is_rev) { // reverse strand
+        for (k = end; k >= beg; --k)
+            seq[l++] = 3 - _get_pac(pac, k);
+    } else { // forward strand
+        for (k = beg; k <= end; ++k)
+            seq[l++] = _get_pac(pac, k);
+    }
+	return seq;
+}
+
 uint8_t *bns_fetch_seq(const bntseq_t *bns, const uint8_t *pac, int64_t *beg, int64_t mid, int64_t *end, int *rid)
 {
 	int64_t far_beg, far_end, len;
@@ -529,6 +546,32 @@ void pac2fa(const bntseq_t *bns, const uint8_t *pac,
 {
     uint8_t *ref_seq = (uint8_t*)malloc(*len * sizeof(uint8_t));
     pac2fa_core(bns, pac, seq_id, start/*0-base*/, len, ref_seq);
+    int i;
+    for (i = 0; i < *len; ++i) seq[i] = "ACGTN"[ref_seq[i]];
+    free(ref_seq);
+}
+
+
+void _pac2fa_core(const bntseq_t *bns, const uint8_t *pac,
+                 const int64_t pac_coor/*0-base*/,
+                 int32_t *len, uint8_t *seq)
+{
+    int64_t i, k, w_len;
+    w_len = bns->anns[bns->n_seqs-1].offset + bns->anns[bns->n_seqs-1].len + 1;
+    if (pac_coor >= w_len || pac_coor < 0) {
+		fprintf(stderr, "\n[bntseq] Error: Coor is longger than sequence lenth.(%lld > %lld)\n", (long long)pac_coor, (long long)bns->anns[bns->n_seqs-1].offset + bns->anns[bns->n_seqs-1].len); exit(1);
+    }
+    if (pac_coor + *len >= w_len) *len = w_len - pac_coor - 1;
+    for (i = 0, k = pac_coor; i < *len; i++, k++)
+        seq[i] = _get_pac(pac, k);
+}
+
+void _pac2fa(const bntseq_t *bns, const uint8_t *pac,
+            const int64_t pac_coor/*0-base*/,
+            int32_t *len, char *seq)
+{
+    uint8_t *ref_seq = (uint8_t*)malloc(*len * sizeof(uint8_t));
+    _pac2fa_core(bns, pac, pac_coor/*0-base*/, len, ref_seq);
     int i;
     for (i = 0; i < *len; ++i) seq[i] = "ACGTN"[ref_seq[i]];
     free(ref_seq);

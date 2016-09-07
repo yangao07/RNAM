@@ -190,6 +190,7 @@ int debwt_pac_shift_kmer_hashKey(debwt_pac_t *db_pac, debwt_count_t l_pac, debwt
     return 0;
 }
 
+//XXX DO NOT work with 'N'(4)
 int get_hash_nt(uint8_t *hash_nt, int hashKey, uint8_t hash_k)
 {
     int i;
@@ -200,6 +201,16 @@ int get_hash_nt(uint8_t *hash_nt, int hashKey, uint8_t hash_k)
     return 0;
 }
 
+int get_hash_value(uint8_t *hash_nt, uint8_t hash_k)
+{
+    int i;
+    int hashKey=0;
+    for (i = 0; i < hash_k; ++i) {
+        hashKey <<= 2;
+        hashKey += hash_nt[i];
+    }
+    return hashKey;
+}
 #define first_n_bits(type, x, l, n)  (type)((x) >> ((l)-(n)))
 #define _first_n_bits(type, x, l, n) (type)(((x) >> ((l)-(n))) << ((l)-(n)))
 #define last_n_bits(type, x, l, n)   (type)(((x) << ((l)-(n))) >> ((l)-(n)))
@@ -485,7 +496,7 @@ void update_uni_node_by_uid(hash_idx *h, kmer_int_t kInt, debwt_count_t *uni_k_i
     h->uni_id[*uni_k_i] = h->cur_uid;
 }
 
-void gen_spe_hash(kmer_num_t k_i, hash_idx *h, debwt_t *d, f_ref_offset_t ref_off, uint8_t is_rev,
+void gen_spe_hash(kmer_num_t k_i, hash_idx *h, debwt_t *d, ref_off_t ref_off, uint8_t is_rev,
                   hash_int_t hashKey, remn_int_t kmerKey, 
                   uint8_t p_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i)
 {
@@ -564,7 +575,7 @@ uint8_t hash_check(hash_idx *h, kmer_int_t kInt,
     return update_hash(k_i, equal_f, h, kInt, hashKey, kmerKey, p_nt, p_hK, p_ki, n_nt, c_sf);
 }
 
-kmer_num_t hash_spe_check(hash_idx *h, debwt_t *d, f_ref_offset_t ref_off, uint8_t is_rev, kmer_int_t kmerInt, uint8_t p_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i, hash_int_t *hashKey)
+kmer_num_t hash_spe_check(hash_idx *h, debwt_t *d, ref_off_t ref_off, uint8_t is_rev, kmer_int_t kmerInt, uint8_t p_nt, hash_int_t pre_hashKey, kmer_num_t pre_k_i, hash_int_t *hashKey)
 {
     remn_int_t kmerKey;
     kmer_num_t k_i;

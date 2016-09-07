@@ -11,12 +11,38 @@ KSEQ_INIT(gzFile, gzread)
 #define CHUNK_SIZE  10000000
 
 #define REST_SEED_LEN 22
-
-
+#define REST_UNI_OCC_THD 2
 
 typedef struct {
-    int n_thread;
-    int seed_len;
+    int read_off, read_loc_len;
+    int uni_n, uni_m;
+    uni_sa_t uni_id;  // array XXX
+    ref_off_t uni_off, uni_loc_len; // array XXX
+} uni_loc_t; // for LOB
+
+typedef struct {
+    int lob_flag; // -1:NULL, 0/1: 1 LOB
+    uni_loc_t lob[2];
+} lob_t;
+
+typedef struct {
+    uni_sa_t uid;
+    ref_off_t uni_off, len1;
+    int read_off, len2;
+} loc_t; // MEM/LOB
+
+typedef struct {
+    int n, m;   // number of seeds
+    loc_t *loc; // sort by seeds' read_off
+} seed_loc_t;
+
+typedef struct {
+    int n_thread;  // number of threads
+
+    int seed_len;  //
+    int debwt_hash_len;
+    int debwt_uni_occ_thd;     
+
 } rest_aln_para;
 
 typedef struct {

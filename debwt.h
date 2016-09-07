@@ -3,6 +3,13 @@
 #include <stdint.h>
 #include "rest_index.h"
 
+#ifdef __LIT__
+#define _BWT_HASH_K 2
+#else
+#define _BWT_HASH_K 13
+#endif
+
+
 #define debwt_int_t uint64_t
 #define _DEBWT_INT_SIZE  64
 #define debwt_hash_t uint32_t
@@ -39,8 +46,6 @@
 #define _SA_INV_B 5
 #define _SA_INV_M 0x1f
 
-//#define _BWT_HASH_K 13
-
 #define _debwt_set_strand(uni_pos_strand, i, s) ((uni_pos_strand)[(i)>>3] |= (s) << (~(i)&7))
 #define _debwt_get_strand(uni_pos_strand, i) (((uni_pos_strand)[(i)>>3]>>(~(i)&7))&1) // 0:+, 1:-
 
@@ -73,13 +78,13 @@ typedef struct {
     //XXX//debwt_count_t *sa_uid, *sa_u_off; 
     uni_sa_t *sa_uid, *sa_u_off; 
     //XXX//debwt_count_t *s_sa_uid;     // normal SA and special SA for all the '#-bwt_char'
-    uni_sa_t *s_sa_uid;
+    uni_sa_t *s_sa_uid; ref_off_t *uni_len; // length of each unipath
 
     // uni_offset_c and uni_offset are used in [kmer_hash]
     //XXX//debwt_count_t *uni_offset_c; // cumulative number of offsets for each unipath
     uni_sa_t *uni_pos_c;
-    //ref_offset_t  *uni_offset;   // offsets of each unipath
-    f_ref_offset_t *uni_pos;
+    //ref_off_t  *uni_offset;   // offsets of each unipath
+    ref_off_t *uni_pos;
     uint8_t *uni_pos_strand;       // 0: forward, 1: reverse
 
     debwt_count_t C[_OCC_C];     // cumulative count of 'A/C/G/T/#'
@@ -109,6 +114,6 @@ void debwt_index_init0(debwt_t *db);
 debwt_t *debwt_restore_index(const char *prefix);
 debwt_count_t debwt_exact_match(const debwt_t *db, int qlen, const uint8_t *query, debwt_count_t *sa_k, debwt_count_t *sa_l);
 debwt_count_t debwt_exact_match_alt(const debwt_t *db, int qlen, const uint8_t *query, debwt_count_t *sa_k, debwt_count_t *sa_l);
-uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, f_ref_offset_t *off);
+uni_sa_t debwt_sa(const debwt_t *db, debwt_count_t sa_uid_i, ref_off_t *off);
 
 #endif
