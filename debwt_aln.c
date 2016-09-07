@@ -7,6 +7,18 @@
 #include "bntseq.h"
 #include "utils.h"
 
+#define MEM_LEN 19
+#define LOB_LEN 13
+#define LOB_DIS 3
+
+void uni_pos_print(uni_sa_t uid, debwt_t *db)
+{
+    uint32_t m;
+    for (m = db->uni_pos_c[uid]; m < db->uni_pos_c[uid+1]; ++m) {
+        stdout_printf("\t%c%d\n", "+-"[_debwt_get_strand(db->uni_pos_strand, m)], (int)db->uni_pos[m]);
+    }
+
+}
 
 int bi_extend(uint8_t *seq1, uint8_t *seq2, int off1, int off2, int len, int *l1, int *l2)
 {
@@ -64,10 +76,6 @@ int uni_mem(uint8_t *read_seq, int read_len, uint32_t read_off1, uint32_t read_o
     int mem_l = bi_extend(read_seq, uni_seq, off1, off2, uni_len, l1, l2);
     return mem_l;
 }
-
-#define MEM_LEN 19
-#define LOB_LEN 13
-#define LOB_DIS 3
 
 int push_loc(seed_loc_t *loc, uni_loc_t uloc)
     //uni_sa_t uid, ref_off_t uni_off, ref_off_t loc_len1, int read_off, int loc_len2)
@@ -200,12 +208,14 @@ int debwt_gen_loc_clu(uint8_t *bseq, int seq_len, debwt_t *db, bntseq_t *bns, ui
             old_i = push_loc(loc_clu, uni_loc) - _BWT_HASH_K; // push mem loc
             int lob_i = loc_clu->n; loc_t l = loc_clu->loc[lob_i-1];
             stdout_printf("MEM: id: %d, uni_off: %d, read_off: %d, len: %d\n", l.uid, l.uni_off, l.read_off, l.len1);
+            uni_pos_print(l.uid, db);
         } else if (max_len >= LOB_LEN) {
             old_i = uni_loc.read_off - _BWT_HASH_K;
             if (push_1lob(lob, uni_loc, db)) {
                 old_i = push_lob(loc_clu, *lob) - _BWT_HASH_K;
                 int lob_i = loc_clu->n; loc_t l = loc_clu->loc[lob_i-1];
                 stdout_printf("LOB id: %d, uni_off: %d, read_off: %d, len1: %d, len2: %d\n", l.uid, l.uni_off, l.read_off, l.len1, l.len2);
+                uni_pos_print(l.uid, db);
             }
         }
         // next loop
