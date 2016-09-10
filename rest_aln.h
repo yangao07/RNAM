@@ -66,5 +66,6 @@ typedef struct {
 
 
 int rest_aln(int argc, char *argv[]);
+void realloc_seed_loc(seed_loc_t *s);
 
 #endif

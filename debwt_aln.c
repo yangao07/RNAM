@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "rest_index.h"
+#include "rest_aln.h"
 #include "debwt_aln.h"
 #include "debwt.h"
 #include "kmer_hash.h"
@@ -8,7 +9,7 @@
 #include "utils.h"
 
 #define MEM_LEN 19
-#define LOB_LEN 13
+#define LOB_LEN 10
 #define LOB_DIS 3
 
 void uni_pos_print(uni_sa_t uid, debwt_t *db)
@@ -17,7 +18,6 @@ void uni_pos_print(uni_sa_t uid, debwt_t *db)
     for (m = db->uni_pos_c[uid]; m < db->uni_pos_c[uid+1]; ++m) {
         stdout_printf("\t%c%d\n", "+-"[_debwt_get_strand(db->uni_pos_strand, m)], (int)db->uni_pos[m]);
     }
-
 }
 
 int bi_extend(uint8_t *seq1, uint8_t *seq2, int off1, int off2, int len, int *l1, int *l2)
@@ -73,16 +73,14 @@ int uni_mem(uint8_t *read_seq, int read_len, uint32_t read_off1, uint32_t read_o
     if (is_rev) pac_coor = uni_pos-uni_start-uni_len;
     else pac_coor = uni_pos+uni_start-1;
     uint8_t *uni_seq = _bns_get_seq(bns->l_pac, pac, pac_coor, uni_len, is_rev);
-    int mem_l = bi_extend(read_seq, uni_seq, off1, off2, uni_len, l1, l2);
+    int mem_l = bi_extend(_read_seq, uni_seq, off1, off2, uni_len, l1, l2);
     return mem_l;
 }
 
 int push_loc(seed_loc_t *loc, uni_loc_t uloc)
-    //uni_sa_t uid, ref_off_t uni_off, ref_off_t loc_len1, int read_off, int loc_len2)
 {
-    if (loc->n == loc->m) {
-        // realloc
-    }
+    if (loc->n == loc->m) realloc_seed_loc(loc);
+
     loc->loc[loc->n].uid = uloc.uni_id;
     loc->loc[loc->n].uni_off = uloc.uni_off, loc->loc[loc->n].len1 = uloc.uni_loc_len;
     loc->loc[loc->n].read_off = uloc.read_off, loc->loc[loc->n].len2 = uloc.read_loc_len;
@@ -92,9 +90,8 @@ int push_loc(seed_loc_t *loc, uni_loc_t uloc)
 
 int push_lob(seed_loc_t *loc, lob_t lob)
 {
-    if (loc->n == loc->m) {
-        // realloc
-    }
+    if (loc->n == loc->m) realloc_seed_loc(loc);
+
     int l1 = 1-lob.lob_flag, l2=lob.lob_flag;
 
     loc->loc[loc->n].uid = lob.lob[l1].uni_id;
@@ -202,24 +199,24 @@ int debwt_gen_loc_clu(uint8_t *bseq, int seq_len, debwt_t *db, bntseq_t *bns, ui
                 max_len = m_len;
             }
         }
+        // next loop
+        cur_i = old_i;
         // push MEM or LOB
         if (max_len > 0) set_uni_loc(&uni_loc, max_read_off, max_loc_len2, max_uid, max_uni_off, max_loc_len1);
         if (max_len >= MEM_LEN) {
-            old_i = push_loc(loc_clu, uni_loc) - _BWT_HASH_K; // push mem loc
+            cur_i = push_loc(loc_clu, uni_loc) - _BWT_HASH_K; // push mem loc
             int lob_i = loc_clu->n; loc_t l = loc_clu->loc[lob_i-1];
             stdout_printf("MEM: id: %d, uni_off: %d, read_off: %d, len: %d\n", l.uid, l.uni_off, l.read_off, l.len1);
             uni_pos_print(l.uid, db);
         } else if (max_len >= LOB_LEN) {
-            old_i = uni_loc.read_off - _BWT_HASH_K;
+            cur_i = uni_loc.read_off - _BWT_HASH_K;
             if (push_1lob(lob, uni_loc, db)) {
-                old_i = push_lob(loc_clu, *lob) - _BWT_HASH_K;
+                cur_i = push_lob(loc_clu, *lob) - _BWT_HASH_K;
                 int lob_i = loc_clu->n; loc_t l = loc_clu->loc[lob_i-1];
                 stdout_printf("LOB id: %d, uni_off: %d, read_off: %d, len1: %d, len2: %d\n", l.uid, l.uni_off, l.read_off, l.len1, l.len2);
                 uni_pos_print(l.uid, db);
             }
         }
-        // next loop
-        cur_i = old_i;
     }
     free(lob);
     // return loc

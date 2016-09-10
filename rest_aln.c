@@ -70,6 +70,11 @@ seed_loc_t *init_seed_loc()
     }
     return loc;
 }
+void realloc_seed_loc(seed_loc_t *s)
+{
+    s->m <<= 1;
+    s->loc = (loc_t*)_err_realloc(s->loc, s->m * sizeof(loc_t));
+}
 
 void free_seed_loc(seed_loc_t *loc) { free(loc->loc); free(loc); }
 

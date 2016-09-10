@@ -6,7 +6,7 @@
 #ifdef __LIT__
 #define _BWT_HASH_K 2
 #else
-#define _BWT_HASH_K 13
+#define _BWT_HASH_K 10
 #endif
 
 
