@@ -9,7 +9,7 @@
 #include "utils.h"
 
 #define MEM_LEN 19
-#define LOB_LEN 10
+#define LOB_LEN 13
 #define LOB_DIS 3
 
 void uni_pos_print(uni_sa_t uid, debwt_t *db)
@@ -92,7 +92,7 @@ int push_lob(seed_loc_t *loc, lob_t lob)
 {
     if (loc->n == loc->m) realloc_seed_loc(loc);
 
-    int l1 = 1-lob.lob_flag, l2=lob.lob_flag;
+    int l1=lob.lob_flag, l2 = 1-lob.lob_flag;
 
     loc->loc[loc->n].uid = lob.lob[l1].uni_id;
     loc->loc[loc->n].uni_off = lob.lob[l1].uni_off, loc->loc[loc->n].read_off = lob.lob[l1].read_off;
@@ -137,11 +137,13 @@ int push_1lob(lob_t *lob, uni_loc_t uni_loc, debwt_t *db)
         // check_lob(lob[0/1] and new loc)
         if (lob_check(lob->lob[lob->lob_flag], uni_loc, db)) {
             lob->lob[1-lob->lob_flag] = uni_loc;
+            lob->lob_flag = 1-lob->lob_flag;
             return 1;
         } else {
-            lob->lob[1-lob->lob_flag] = uni_loc;
-            lob->lob_flag = 1-lob->lob_flag;
-            return 0;
+            //lob->lob[1-lob->lob_flag] = uni_loc;
+            //lob->lob_flag = 1-lob->lob_flag;
+            lob->lob_flag = -1;
+            return -1;
         }
     } else {
         err_printf("[push_lob] Error: unknown lob flag: %d.\n", lob->lob_flag);
@@ -162,7 +164,7 @@ void set_uni_loc(uni_loc_t *uni_loc, int read_off, int read_loc_len, uni_sa_t ui
 
 int debwt_gen_loc_clu(uint8_t *bseq, int seq_len, debwt_t *db, bntseq_t *bns, uint8_t *pac, rest_aln_para *ap, seed_loc_t *loc_clu)
 {
-    int cur_i, old_i;
+    int cur_i, old_i, old_lob_i;
     debwt_count_t i, uni_occ_thd = ap->debwt_uni_occ_thd, k, l, il;
     lob_t *lob = (lob_t*)_err_malloc(sizeof(lob_t)); lob->lob_flag = -1;
     uni_loc_t uni_loc;
@@ -175,7 +177,7 @@ int debwt_gen_loc_clu(uint8_t *bseq, int seq_len, debwt_t *db, bntseq_t *bns, ui
         if (il == 0) continue;
         l = k + il - 1;
         // bwt backtrack
-        while (il > uni_occ_thd) {
+        while (il > uni_occ_thd && cur_i >= 1) {
             il = debwt_exact_match_alt(db, 1, bseq+cur_i-1, &k, &l);
             if (il == 0 || cur_i == 1) break;
             --cur_i;
@@ -201,23 +203,30 @@ int debwt_gen_loc_clu(uint8_t *bseq, int seq_len, debwt_t *db, bntseq_t *bns, ui
         }
         // next loop
         cur_i = old_i;
-        // push MEM or LOB
         if (max_len > 0) set_uni_loc(&uni_loc, max_read_off, max_loc_len2, max_uid, max_uni_off, max_loc_len1);
-        if (max_len >= MEM_LEN) {
+        if (max_len >= MEM_LEN) { // MEM seed
             cur_i = push_loc(loc_clu, uni_loc) - _BWT_HASH_K; // push mem loc
-            int lob_i = loc_clu->n; loc_t l = loc_clu->loc[lob_i-1];
+            lob->lob_flag = -1;
+            int l_i = loc_clu->n; loc_t l = loc_clu->loc[l_i-1];
             stdout_printf("MEM: id: %d, uni_off: %d, read_off: %d, len: %d\n", l.uid, l.uni_off, l.read_off, l.len1);
             uni_pos_print(l.uid, db);
         } else if (max_len >= LOB_LEN) {
-            cur_i = uni_loc.read_off - _BWT_HASH_K;
-            if (push_1lob(lob, uni_loc, db)) {
-                cur_i = push_lob(loc_clu, *lob) - _BWT_HASH_K;
+            int res = push_1lob(lob, uni_loc, db);
+            if (res == 0) { // lob_flag == -1
+                cur_i = uni_loc.read_off - _BWT_HASH_K;
+                old_lob_i = old_i;
+            } else if (res == 1) { // check == 1
+                cur_i = push_lob(loc_clu, *lob) - _BWT_HASH_K; // push lob loc
+                old_lob_i = cur_i;
                 int lob_i = loc_clu->n; loc_t l = loc_clu->loc[lob_i-1];
                 stdout_printf("LOB id: %d, uni_off: %d, read_off: %d, len1: %d, len2: %d\n", l.uid, l.uni_off, l.read_off, l.len1, l.len2);
                 uni_pos_print(l.uid, db);
+            } else { // check == 0
+                cur_i = old_lob_i;
             }
         }
     }
+    
     free(lob);
     // return loc
     return 0;
