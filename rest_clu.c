@@ -56,7 +56,6 @@ void add_seed_clu(seed_clu_t *sc, loc_t loc) {
 /* @input:  seeds location of one read
  * @output: one seed cluster represents the read
  * @para:                                      */
-
 int seed_clu(seed_loc_t *sl)
 {
     int i, j, res;
@@ -73,6 +72,9 @@ int seed_clu(seed_loc_t *sl)
     return 0;
 }
 
+/* @input:   read's RPRST unipath/pos and whole seeds' locs
+ * @process: set corresponding bin based on the RPRST
+ * @para:                                                  */
 int read_clu()
 {
     return 0;

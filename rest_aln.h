@@ -32,6 +32,11 @@ typedef struct {
 } loc_t; // MEM/LOB
 
 typedef struct {
+    int n, m; // number of seeds
+    loc_t *loc; int *clu_w;
+} loc_clu_t;
+
+typedef struct {
     int n, m;   // number of seeds
     loc_t *loc; // sort by seeds' read_off
 } seed_loc_t;

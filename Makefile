@@ -5,7 +5,6 @@ LDFLAGS = -lz -lm -lpthread
 
 BIN_DIR =
 SRC_DIR = 
-#SOURCE  = main.c rest_index.c rest_aln.c debwt.c bntseq.c kmer_hash.c utils.c kstring.c
 SOURCE  = $(wildcard $(SRC_DIR)*.c)
 OBJS    = $(SOURCE:.c=.o)
 
